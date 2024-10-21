@@ -1,6 +1,6 @@
 # Ollama Swift Client
 
-A Swift client library for interacting with the 
+A Swift client library for interacting with the
 [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md).
 
 ## Requirements
@@ -21,11 +21,11 @@ Add the following to your `Package.swift` file:
 
 ## Usage
 
-> [!NOTE]  
-> The tests and example code for this library use the 
+> [!NOTE]
+> The tests and example code for this library use the
 > [llama3.2](https://ollama.com/library/llama3.2) model.
 > Run the following command to download the model to run them yourself:
-> 
+>
 > ```
 > ollama pull llama3.2
 > ```
@@ -53,8 +53,8 @@ do {
         model: "llama3.2",
         prompt: "Tell me a joke about Swift programming.",
         options: [
-            "temperature": .number(0.7),
-            "max_tokens": .number(100)
+            "temperature": 0.7,
+            "max_tokens": 100
         ]
     )
     print(response.response)
@@ -69,14 +69,12 @@ Generate a chat completion:
 
 ```swift
 do {
-    let messages: [ChatMessage] = [
-        .init(role: .system, content: "You are a helpful assistant."),
-        .init(role: .user, content: "In which city is Apple Inc. located?")
-    ]
-    
     let response = try await client.chat(
         model: "llama3.2",
-        messages: messages
+        messages: [
+            .system("You are a helpful assistant."),
+            .user("In which city is Apple Inc. located?")
+        ]
     )
     print(response.message.content)
 } catch {

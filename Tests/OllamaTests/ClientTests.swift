@@ -40,7 +40,95 @@ final class ClientTests: XCTestCase {
             messages: messages)
         XCTAssertFalse(response.message.content.isEmpty)
     }
-
+    
+    func testChatToolCompletion() async throws {
+        ollama.tools = [
+            Chat.Tool(
+                name: "add",
+                description: "A function that adds two numbers",
+                parameters: [
+                    Chat.Tool.ToolParameter(name: "x", description: "The first integer", parameterType: .integer, required: true),
+                    Chat.Tool.ToolParameter(name: "y", description: "The second integer", parameterType: .integer, required: true)
+                ],
+                action: { (parameters: [String : Value]) in
+                    guard let x: Int = parameters["x"]?.intValue,
+                          let y: Int = parameters["y"]?.intValue
+                    else {
+                        return .null
+                    }
+                    
+                    return .int(x + y)
+                }
+            )
+        ]
+        
+        var messages: [Chat.Message] = [
+            .system("You are a helpful AI assistant. Who will use a tool to help you when needed."),
+            .user("What is 23 + 58 ?"),
+        ]
+        
+        let response = try await ollama.chat(
+            model: "llama3.2",
+            messages: messages)
+        
+        XCTAssertNotNil(response.message.tool_calls)
+        XCTAssertTrue(response.message.content.isEmpty)
+        
+        let toolCalls = response.message.tool_calls!
+        let replyMessage = try ollama.processToolCalls(toolCalls)
+        
+        messages.append(replyMessage)
+        
+        let secondResponse = try await ollama.chat(
+            model: "llama3.2",
+            messages: messages
+        )
+        
+        XCTAssertFalse(secondResponse.message.content.isEmpty)
+        XCTAssertTrue(secondResponse.message.content.contains("81"))
+    }
+    
+    func testChatToolAutoCompletion() async throws {
+        ollama.tools = [
+            Chat.Tool(
+                name: "add",
+                description: "A function that adds two numbers",
+                parameters: [
+                    Chat.Tool.ToolParameter(name: "x", description: "The first integer", parameterType: .integer, required: true),
+                    Chat.Tool.ToolParameter(name: "y", description: "The second integer", parameterType: .integer, required: true)
+                ],
+                action: { (parameters: [String : Value]) in
+                    guard let x: Int = parameters["x"]?.intValue,
+                          let y: Int = parameters["y"]?.intValue
+                    else {
+                        return .null
+                    }
+                    
+                    return .int(x + y)
+                }
+            )
+        ]
+        
+        let messages: [Chat.Message] = [
+            .system("You are a helpful AI assistant. Who will use a tool to help you when needed."),
+            .user("What is 23 + 58 ?"),
+        ]
+        
+        let (chatMessages, response) = try await ollama.autoRunChat(
+            model: "llama3.2",
+            messages: messages
+        )
+        
+        print(response.message)
+        print(response.message.content)
+        
+        XCTAssertTrue(chatMessages.count > messages.count)
+        XCTAssertTrue(chatMessages.last?.role == .tool) // ensure we are getting the tool added to the history
+        
+        XCTAssertFalse(response.message.content.isEmpty)
+        XCTAssertTrue(response.message.content.contains("81"))
+    }
+    
     func testEmbed() async throws {
         let input = "This is a test sentence for embedding."
         let response = try await ollama.embed(model: "llama3.2", input: input)

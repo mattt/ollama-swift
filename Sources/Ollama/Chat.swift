@@ -14,6 +14,8 @@ public enum Chat {
             case system
             /// Represents a message from the AI assistant.
             case assistant
+            /// Represents a user tool responding to a function call by the AI assistant.
+            case tool
         }
 
         /// The role of the message sender.
@@ -24,7 +26,23 @@ public enum Chat {
 
         /// Optional array of image data associated with the message.
         public let images: [Data]?
-
+        
+        /// The function call information
+        public struct ToolCall: Hashable, Codable {
+            /// The function being called
+            public struct ToolFunction: Hashable, Codable {
+                /// The name of the function being called
+                let name: String
+                /// The arguments being passed to the function
+                let arguments: [String: Value]
+            }
+            /// The function being called
+            let function: ToolFunction
+        }
+        
+        /// Optional array of tool calls the model is asking for in order to create it's reply message..
+        public let tool_calls: [ToolCall]?
+        
         /// Creates a new chat message.
         ///
         /// - Parameters:
@@ -34,11 +52,13 @@ public enum Chat {
         public init(
             role: Role,
             content: String,
-            images: [Data]? = nil
+            images: [Data]? = nil,
+            toolCalls: [ToolCall]? = nil
         ) {
             self.role = role
             self.content = content
             self.images = images
+            self.tool_calls = toolCalls
         }
 
         /// Creates a user message.
@@ -78,6 +98,18 @@ public enum Chat {
             images: [Data]? = nil
         ) -> Message {
             return Message(role: .assistant, content: content, images: images)
+        }
+        
+        /// Creates a tool message back to the assistant.
+        /// - Parameters:
+        ///   - content: The content of the message
+        ///   - images: Optional array of image data associated with the message
+        /// - Returns: A new `Message` instance with the tool role
+        public static func tool(
+            _ content: String,
+            images: [Data]? = nil
+        ) -> Message {
+            return Message(role: .tool, content: content, images: images)
         }
     }
 }

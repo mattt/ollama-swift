@@ -338,6 +338,20 @@ extension Client {
         }
         
         return try await fetch(.post, "/api/chat", params: params)
+    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall]) throws -> Chat.Message {
+        var responses: [Value] = []
+        
+        for toolCall in toolCalls {
+            if let matchingTool = self.tools.first(where: { $0.definition.function.name == toolCall.function.name })
+            {
+                responses.append(matchingTool.action(toolCall.function.arguments))
+            }
+        }
+        
+        let data = try JSONEncoder().encode(responses)
+        let replyString = String(decoding: data, as: UTF8.self)
+        
+        return Chat.Message.tool(replyString)
     }
 }
 

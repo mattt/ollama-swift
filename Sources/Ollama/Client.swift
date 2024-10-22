@@ -338,6 +338,57 @@ extension Client {
         }
         
         return try await fetch(.post, "/api/chat", params: params)
+        
+    }
+    
+    /// Generates the next message in a chat with a provided model.
+    ///
+    /// - Parameters:
+    ///   - model: The name of the model to use for the chat.
+    ///   - messages: The messages of the chat, used to keep a chat memory.
+    ///   - options: Additional model parameters as specified in the Modelfile documentation.
+    ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
+    /// - Returns: A `ChatResponse` containing the generated message and additional information.
+    /// - Throws: An error if the request fails or the response cannot be decoded.
+    public func autoRunChat(
+        model: Model.ID,
+        messages: [Chat.Message],
+        options: [String: Value]? = nil,
+        tools: [Chat.ToolDefinition]? = nil,
+        template: String? = nil
+    )
+    async throws -> ([Chat.Message], ChatResponse)
+    {
+        let response: ChatResponse = try await chat(
+            model: model,
+            messages: messages,
+            options: options,
+            tools: tools,
+            template: template
+        )
+        
+        if let toolCalls = response.message.tool_calls
+        {
+            let replyMessage = try self.processToolCalls(toolCalls)
+            
+            var newMessages: [Chat.Message] = messages
+            newMessages.append(replyMessage)
+            
+            let response: ChatResponse = try await chat(
+                model: model,
+                messages: newMessages,
+                options: options,
+                tools: tools,
+                template: template
+            )
+            
+            return (newMessages, response)
+        }
+        else {
+            return (messages, response)
+        }
+    }
+    
     public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall]) throws -> Chat.Message {
         var responses: [Value] = []
         

@@ -305,6 +305,7 @@ extension Client {
     ///   - model: The name of the model to use for the chat.
     ///   - messages: The messages of the chat, used to keep a chat memory.
     ///   - options: Additional model parameters as specified in the Modelfile documentation.
+    ///   - tools: Override the list of tools to include in this chat.
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
     /// - Returns: A `ChatResponse` containing the generated message and additional information.
     /// - Throws: An error if the request fails or the response cannot be decoded.
@@ -347,6 +348,7 @@ extension Client {
     ///   - model: The name of the model to use for the chat.
     ///   - messages: The messages of the chat, used to keep a chat memory.
     ///   - options: Additional model parameters as specified in the Modelfile documentation.
+    ///   - tools: Override the list of tools to include in this chat.
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
     /// - Returns: A `ChatResponse` containing the generated message and additional information.
     /// - Throws: An error if the request fails or the response cannot be decoded.

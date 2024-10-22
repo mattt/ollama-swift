@@ -25,6 +25,9 @@ open class Client {
 
     /// The underlying client session.
     internal(set) public var session: URLSession
+	
+	/// A list of tools to include in chat requests
+	var tools: [Chat.Tool] = []
 
     /// Creates a client with the specified session, host, and user agent.
     ///
@@ -309,10 +312,13 @@ extension Client {
         model: Model.ID,
         messages: [Chat.Message],
         options: [String: Value]? = nil,
+        tools: [Chat.ToolDefinition]? = nil,
         template: String? = nil
     )
         async throws -> ChatResponse
     {
+        let toolDefinitions: [Chat.ToolDefinition] = tools ?? self.tools.map({ $0.definition })
+        
         var params: [String: Value] = [
             "model": .string(model.rawValue),
             "messages": try Value(messages),
@@ -326,7 +332,11 @@ extension Client {
         if let template {
             params["template"] = .string(template)
         }
-
+        
+        if toolDefinitions.count > 0 {
+            params["tools"] = try Value(toolDefinitions)
+        }
+        
         return try await fetch(.post, "/api/chat", params: params)
     }
 }

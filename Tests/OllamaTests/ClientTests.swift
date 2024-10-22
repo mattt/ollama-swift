@@ -119,11 +119,8 @@ final class ClientTests: XCTestCase {
             messages: messages
         )
         
-        print(response.message)
-        print(response.message.content)
-        
         XCTAssertTrue(chatMessages.count > messages.count)
-        XCTAssertTrue(chatMessages.last?.role == .tool) // ensure we are getting the tool added to the history
+        XCTAssertTrue(chatMessages.last?.role == .tool)
         
         XCTAssertFalse(response.message.content.isEmpty)
         XCTAssertTrue(response.message.content.contains("81"))

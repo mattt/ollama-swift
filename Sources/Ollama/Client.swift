@@ -369,7 +369,7 @@ extension Client {
         
         if let toolCalls = response.message.tool_calls
         {
-            let replyMessage = try self.processToolCalls(toolCalls)
+            let (_, replyMessage) = try self.processToolCalls(toolCalls)
             
             var newMessages: [Chat.Message] = messages
             newMessages.append(replyMessage)
@@ -389,7 +389,7 @@ extension Client {
         }
     }
     
-    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall]) throws -> Chat.Message {
+    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall]) throws -> ([Value], Chat.Message) {
         var responses: [Value] = []
         
         for toolCall in toolCalls {
@@ -402,7 +402,7 @@ extension Client {
         let data = try JSONEncoder().encode(responses)
         let replyString = String(decoding: data, as: UTF8.self)
         
-        return Chat.Message.tool(replyString)
+        return (responses, Chat.Message.tool(replyString))
     }
 }
 

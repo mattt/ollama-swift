@@ -13,10 +13,18 @@ extension Chat {
         public struct ToolParameter {
             /// The type of parameter object
             public enum ParameterType: String {
-                /// Represents the  integer json type
-                case integer
+                /// Represents the number json type
+                case number
+                /// Represents the boolean json type
+                case boolean
                 /// Represents the string json type
                 case string
+                /// Represents the object json type
+                case object
+                /// Represents the array json type
+                case array
+                /// Represents the null json type
+                case null
             }
             
             /// The name of this parameter

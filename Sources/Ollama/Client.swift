@@ -400,11 +400,18 @@ extension Client {
         let result: Value
     }
     
-    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall]) throws -> ([ToolCallResult], Chat.Message) {
+    /// Processes the tool calls, runs the tools, and records the results.
+    /// - Parameters:
+    ///   - toolCalls: The tool calls to process
+    ///   - tools: The tools to use, defaults to using `self.tools`
+    /// - Returns: The results of each tool call and a formatted Chat.Message to use to reply to the assistant.
+    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall], tools: [Chat.Tool]? = nil) throws -> ([ToolCallResult], Chat.Message) {
         var responses: [ToolCallResult] = []
         
+        let tools: [Chat.Tool] = tools ?? self.tools
+        
         for toolCall in toolCalls {
-            if let matchingTool = self.tools.first(where: { $0.definition.function.name == toolCall.function.name })
+            if let matchingTool = tools.first(where: { $0.definition.function.name == toolCall.function.name })
             {
                 let result: Value = matchingTool.action(toolCall.function.arguments)
                 

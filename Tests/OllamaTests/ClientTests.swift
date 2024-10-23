@@ -119,6 +119,15 @@ final class ClientTests: XCTestCase {
             messages: messages
         )
         
+        XCTAssertTrue(chatMessages.count == 4)
+        
+        XCTAssertTrue(chatMessages[0].role == .system)
+        XCTAssertTrue(chatMessages[1].role == .user)
+        XCTAssertTrue(chatMessages[2].role == .assistant)
+        XCTAssertTrue(chatMessages[3].role == .tool)
+        
+        XCTAssertFalse(response.message.content.isEmpty)
+        XCTAssertTrue(response.message.content.contains("81"))
         XCTAssertTrue(chatMessages.count > messages.count)
         XCTAssertTrue(chatMessages.last?.role == .tool)
         

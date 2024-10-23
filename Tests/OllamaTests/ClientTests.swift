@@ -47,17 +47,17 @@ final class ClientTests: XCTestCase {
                 name: "add",
                 description: "A function that adds two numbers",
                 parameters: [
-                    Chat.Tool.ToolParameter(name: "x", description: "The first integer", parameterType: .integer, required: true),
-                    Chat.Tool.ToolParameter(name: "y", description: "The second integer", parameterType: .integer, required: true)
+                    Chat.Tool.ToolParameter(name: "x", description: "The first number", parameterType: .number, required: true),
+                    Chat.Tool.ToolParameter(name: "y", description: "The second number", parameterType: .number, required: true)
                 ],
                 action: { (parameters: [String : Value]) in
-                    guard let x: Int = parameters["x"]?.intValue,
-                          let y: Int = parameters["y"]?.intValue
+                    guard let x: Double = parameters["x"]?.asDoubleValue,
+                          let y: Double = parameters["y"]?.asDoubleValue
                     else {
                         return .null
                     }
                     
-                    return .int(x + y)
+                    return .double(x + y)
                 }
             )
         ]
@@ -77,7 +77,7 @@ final class ClientTests: XCTestCase {
         let toolCalls = response.message.tool_calls!
         let replyMessage = try ollama.processToolCalls(toolCalls)
         
-        messages.append(replyMessage)
+        messages.append(replyMessage.1)
         
         let secondResponse = try await ollama.chat(
             model: "llama3.2",
@@ -94,17 +94,17 @@ final class ClientTests: XCTestCase {
                 name: "add",
                 description: "A function that adds two numbers",
                 parameters: [
-                    Chat.Tool.ToolParameter(name: "x", description: "The first integer", parameterType: .integer, required: true),
-                    Chat.Tool.ToolParameter(name: "y", description: "The second integer", parameterType: .integer, required: true)
+                    Chat.Tool.ToolParameter(name: "x", description: "The first number", parameterType: .number, required: true),
+                    Chat.Tool.ToolParameter(name: "y", description: "The second number", parameterType: .number, required: true)
                 ],
                 action: { (parameters: [String : Value]) in
-                    guard let x: Int = parameters["x"]?.intValue,
-                          let y: Int = parameters["y"]?.intValue
+                    guard let x: Double = parameters["x"]?.asDoubleValue,
+                          let y: Double = parameters["y"]?.asDoubleValue
                     else {
                         return .null
                     }
                     
-                    return .int(x + y)
+                    return .double(x + y)
                 }
             )
         ]
@@ -128,11 +128,64 @@ final class ClientTests: XCTestCase {
         
         XCTAssertFalse(response.message.content.isEmpty)
         XCTAssertTrue(response.message.content.contains("81"))
+    }
+    
+    func testChatMultiToolAutoCompletion() async throws {
+        ollama.tools = [
+            Chat.Tool(
+                name: "add",
+                description: "A function that adds two numbers",
+                parameters: [
+                    Chat.Tool.ToolParameter(name: "x", description: "The first number", parameterType: .number, required: true),
+                    Chat.Tool.ToolParameter(name: "y", description: "The second number", parameterType: .number, required: true)
+                ],
+                action: { (parameters: [String : Value]) in
+                    guard let x: Double = parameters["x"]?.asDoubleValue,
+                          let y: Double = parameters["y"]?.asDoubleValue
+                    else {
+                        return .null
+                    }
+                    
+                    return .double(x + y)
+                }
+            ),
+            Chat.Tool(
+                name: "divide",
+                description: "A function that divides two numbers",
+                parameters: [
+                    Chat.Tool.ToolParameter(name: "x", description: "The first number", parameterType: .number, required: true),
+                    Chat.Tool.ToolParameter(name: "y", description: "The second number", parameterType: .number, required: true)
+                ],
+                action: { (parameters: [String : Value]) in
+                    guard let x: Double = parameters["x"]?.asDoubleValue,
+                          let y: Double = parameters["y"]?.asDoubleValue,
+                          x.isNormal,
+                          y.isNormal, !y.isZero
+                    else {
+                        return .null
+                    }
+                    
+                    return .double(x / y)
+                }
+            )
+        ]
+        
+        let messages: [Chat.Message] = [
+            .system("You are a helpful AI assistant. Who will use a tool to help you when needed."),
+            .user("What the answer to these questions: What is (23 + 58)? And what is (497 / 71) ?"),
+        ]
+        
+        let (chatMessages, response) = try await ollama.autoRunChat(
+            model: "llama3.2",
+            messages: messages
+        )
+        
         XCTAssertTrue(chatMessages.count > messages.count)
         XCTAssertTrue(chatMessages.last?.role == .tool)
         
         XCTAssertFalse(response.message.content.isEmpty)
         XCTAssertTrue(response.message.content.contains("81"))
+        XCTAssertTrue(response.message.content.contains("7"))
     }
     
     func testEmbed() async throws {

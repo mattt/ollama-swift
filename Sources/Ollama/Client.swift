@@ -374,6 +374,7 @@ extension Client {
             let (_, replyMessage) = try self.processToolCalls(toolCalls)
             
             var newMessages: [Chat.Message] = messages
+            newMessages.append(response.message)
             newMessages.append(replyMessage)
             
             let response: ChatResponse = try await chat(

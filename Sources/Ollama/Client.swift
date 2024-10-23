@@ -392,17 +392,33 @@ extension Client {
         }
     }
     
-    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall]) throws -> ([Value], Chat.Message) {
-        var responses: [Value] = []
+    /// Used to return the function call results back to the LLM
+    public struct ToolCallResult: Encodable {
+        /// The name of the function called
+        let function: String
+        /// The result of calling the function
+        let result: Value
+    }
+    
+    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall]) throws -> ([ToolCallResult], Chat.Message) {
+        var responses: [ToolCallResult] = []
         
         for toolCall in toolCalls {
             if let matchingTool = self.tools.first(where: { $0.definition.function.name == toolCall.function.name })
             {
-                responses.append(matchingTool.action(toolCall.function.arguments))
+                let result: Value = matchingTool.action(toolCall.function.arguments)
+                
+                responses.append(ToolCallResult(
+                    function: matchingTool.definition.function.name,
+                    result: result
+                ))
             }
         }
         
-        let data = try JSONEncoder().encode(responses)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [ .sortedKeys ]
+        
+        let data = try encoder.encode(responses)
         let replyString = String(decoding: data, as: UTF8.self)
         
         return (responses, Chat.Message.tool(replyString))

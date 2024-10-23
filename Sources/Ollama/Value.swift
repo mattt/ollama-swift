@@ -242,3 +242,22 @@ extension Value: ExpressibleByStringInterpolation {
         self = .string(stringInterpolation.stringValue)
     }
 }
+
+// MARK: - JSON Helper
+
+extension Value {
+    /// Convert the value to a Double if it is representable as a double,
+    /// otherwise nil
+    public var asDoubleValue: Double? {
+        switch self {
+            case .int(let value):
+                return Double(value)
+            case .double(let value):
+                return value
+            case .string(let string):
+                return Double(string)
+            default:
+                return nil
+        }
+    }
+}

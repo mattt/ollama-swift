@@ -252,7 +252,7 @@ extension Bool {
     /// In strict mode, only `.bool` values are converted. In non-strict mode, the following conversions are supported:
     /// - Integers: `1` is `true`, `0` is `false`
     /// - Doubles: `1.0` is `true`, `0.0` is `false`
-    /// - Strings (case-insensitive):
+    /// - Strings (lowercase only):
     ///   - `true`: "true", "t", "yes", "y", "on", "1"
     ///   - `false`: "false", "f", "no", "n", "off", "0"
     ///
@@ -272,18 +272,22 @@ extension Bool {
         case .bool(let b):
             self = b
         case .int(let i) where !strict:
-            self = i == 1
+            switch i {
+            case 0: self = false
+            case 1: self = true
+            default: return nil
+            }
         case .double(let d) where !strict:
-            self = d == 1.0
+            switch d {
+            case 0.0: self = false
+            case 1.0: self = true
+            default: return nil
+            }
         case .string(let s) where !strict:
             switch s {
-            case "true", "t", "yes", "y", "on", "1",
-                "TRUE", "T", "YES", "Y", "ON",
-                "True", "Yes", "On":
+            case "true", "t", "yes", "y", "on", "1":
                 self = true
-            case "false", "f", "no", "n", "off", "0",
-                "FALSE", "F", "NO", "N", "OFF",
-                "False", "No", "Off":
+            case "false", "f", "no", "n", "off", "0":
                 self = false
             default:
                 return nil

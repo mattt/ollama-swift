@@ -75,7 +75,7 @@ final class ClientTests: XCTestCase {
         XCTAssertTrue(response.message.content.isEmpty)
         
         let toolCalls = response.message.tool_calls!
-        let replyMessage = try ollama.processToolCalls(toolCalls)
+        let replyMessage = try await ollama.processToolCalls(toolCalls)
         
         messages.append(replyMessage.1)
         

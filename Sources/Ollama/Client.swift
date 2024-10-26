@@ -369,10 +369,12 @@ extension Client {
             template: template
         )
         
+        // n.b. Processes tool calls serially (without concurrency)
+        // TODO: Include a client configuration `AsyncStrategy` and allow for an ordered concurrent strategy
         if let toolCalls = response.message.tool_calls
         {
-            let (_, replyMessage) = try self.processToolCalls(toolCalls)
-            
+            let (_, replyMessage) = try await self.processToolCalls(toolCalls)
+
             var newMessages: [Chat.Message] = messages
             newMessages.append(response.message)
             newMessages.append(replyMessage)
@@ -405,23 +407,20 @@ extension Client {
     ///   - toolCalls: The tool calls to process
     ///   - tools: Override the list of tools to be used processing this request, defaults to using `self.tools`.
     /// - Returns: The results of each tool call and a formatted Chat.Message to use to reply to the assistant.
-    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall], tools: [Chat.Tool]? = nil) throws -> ([ToolCallResult], Chat.Message) {
-        var responses: [ToolCallResult] = []
-        
+    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall], tools: [Chat.Tool]? = nil) async throws -> ([ToolCallResult], Chat.Message) {
         let tools: [Chat.Tool] = tools ?? self.tools
         
+        var responses: [ToolCallResult] = []
         for toolCall in toolCalls {
             if let matchingTool = tools.first(where: { $0.definition.function.name == toolCall.function.name })
             {
-                let result: Value = matchingTool.action(toolCall.function.arguments)
-                
                 responses.append(ToolCallResult(
                     function: matchingTool.definition.function.name,
-                    result: result
+                    result: try await matchingTool.action(toolCall.function.arguments)
                 ))
             }
         }
-        
+
         let encoder = JSONEncoder()
         encoder.outputFormatting = [ .sortedKeys ]
         

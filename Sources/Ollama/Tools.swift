@@ -7,7 +7,7 @@ extension Chat {
         /// The definition included in the API calls
         public let definition: ToolDefinition
         /// The action to be run when this tool is called on by the AI
-        public let action: ([String: Value]) -> Value
+        public let action: ([String: Value]) async throws -> Value
         
         /// A parameter passed into the function
         public struct ToolParameter {
@@ -50,7 +50,7 @@ extension Chat {
             name: String,
             description: String,
             parameters: [ToolParameter],
-            action: @escaping ([String : Value]) -> Value
+            action: @escaping ([String : Value]) async throws -> Value
         ) {
             var parametersDefinitions: [String : Value] = [:]
             parametersDefinitions["type"] = .string("object")

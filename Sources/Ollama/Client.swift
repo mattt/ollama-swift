@@ -269,6 +269,8 @@ extension Client {
 // MARK: - Chat
 
 extension Client {
+    
+    /// The chat response from the API to a chat request
     public struct ChatResponse: Hashable, Decodable {
         public let model: Model.ID
         public let createdAt: Date
@@ -295,6 +297,9 @@ extension Client {
             case evalDuration = "eval_duration"
         }
     }
+    
+    /// An async closure which allows you to approve or disallow a tool call. Accepts a `ToolCall` and the `Chat.Tool` which will be run.
+    public typealias ToolCallApproval = (Chat.Message.ToolCall, Chat.Tool) async -> Bool
 
     /// Generates the next message in a chat with a provided model.
     ///
@@ -302,32 +307,103 @@ extension Client {
     ///   - model: The name of the model to use for the chat.
     ///   - messages: The messages of the chat, used to keep a chat memory.
     ///   - options: Additional model parameters as specified in the Modelfile documentation.
+    ///   - tools: Override the list of tools to include in this chat.
+    ///   - toolApproval: Handle approving or rejecting each tool call. Default is to auto run all tools. If `nil`  the message from Ollama will be directly returned to you to process on your own without running any tools.
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
-    /// - Returns: A `ChatResponse` containing the generated message and additional information.
+    /// - Returns: A tuple of, the array of previous chat messages this response is replying to, and a `ChatResponse` containing the generated message and additional information.
     /// - Throws: An error if the request fails or the response cannot be decoded.
     public func chat(
         model: Model.ID,
         messages: [Chat.Message],
         options: [String: Value]? = nil,
+        tools: [Chat.Tool]? = nil,
+        toolApproval: ToolCallApproval? = { _, _ in return true },
         template: String? = nil
     )
-        async throws -> ChatResponse
+        async throws -> ([Chat.Message], ChatResponse)
     {
         var params: [String: Value] = [
             "model": .string(model.rawValue),
             "messages": try Value(messages),
             "stream": false,
         ]
-
+        
         if let options {
             params["options"] = .object(options)
         }
-
+        
         if let template {
             params["template"] = .string(template)
         }
-
-        return try await fetch(.post, "/api/chat", params: params)
+        
+        if let tools, tools.count > 0 {
+            params["tools"] = try Value(tools.map({ $0.definition }))
+        }
+        
+        let response: ChatResponse = try await fetch(.post, "/api/chat", params: params)
+        
+        if let toolCalls = response.message.tool_calls,
+           let tools = tools,
+           let toolApproval = toolApproval
+        {
+            let (_, replyMessage) = try await self.processToolCalls(toolCalls, tools: tools, toolCallApproval: toolApproval)
+            
+            var newMessages: [Chat.Message] = messages
+            newMessages.append(response.message)
+            newMessages.append(replyMessage)
+            
+            return try await chat(
+                model: model,
+                messages: newMessages,
+                options: options,
+                tools: tools,
+                template: template
+            )
+        }
+        else {
+            return (messages, response)
+        }
+        
+    }
+    
+    /// Used to return the function call results back to the LLM
+    public struct ToolCallResult: Encodable {
+        /// The name of the function called
+        let function: String
+        /// The result of calling the function
+        let result: Value
+    }
+    
+    /// Processes the tool calls, runs the tools, and records the results.
+    /// - Parameters:
+    ///   - toolCalls: The tool calls to process
+    ///   - tools: The list of tools to be used processing this request
+    ///   - toolCallApproval: Optional async closure which allows you to approve or disallow each desired function call, defaults to allowing all function calls.
+    /// - Returns: The results of each tool call and a formatted Chat.Message to use to reply to the assistant.
+    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall], tools: [Chat.Tool], toolCallApproval: ToolCallApproval? = nil) async throws -> ([ToolCallResult], Chat.Message) {
+        var responses: [ToolCallResult] = []
+        
+        guard tools.count > 0 else { return (responses, Chat.Message.tool("")) }
+        
+        for toolCall in toolCalls {
+            if let matchingTool = tools.first(where: { $0.definition.function.name == toolCall.function.name })
+            {
+                let toolApproved = (await toolCallApproval?(toolCall, matchingTool)) ?? true
+                
+                responses.append(ToolCallResult(
+                    function: matchingTool.definition.function.name,
+                    result: toolApproved ? try await matchingTool.action(toolCall.function.arguments) : Value.null
+                ))
+            }
+        }
+        
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [ .sortedKeys ]
+        
+        let data = try encoder.encode(responses)
+        let replyString = String(decoding: data, as: UTF8.self)
+        
+        return (responses, Chat.Message.tool(replyString))
     }
 }
 

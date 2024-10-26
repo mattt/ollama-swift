@@ -363,7 +363,6 @@ extension Client {
         else {
             return (messages, response)
         }
-        
     }
     
     /// Used to return the function call results back to the LLM

@@ -248,13 +248,13 @@ extension Value: ExpressibleByStringInterpolation {
 extension Value {
     /// Convert the value to a `Double` if it is representable as a `Double`,
     /// otherwise returns `nil`.
-    public var asDoubleValue: Double? {
+    public func asDoubleValue(strict: Bool = false) -> Double? {
         switch self {
             case .int(let value):
                 return Double(value)
             case .double(let value):
                 return value
-            case .string(let string):
+            case .string(let string) where !strict:
                 return Double(string)
             default:
                 return nil

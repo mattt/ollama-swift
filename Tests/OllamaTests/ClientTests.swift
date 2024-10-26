@@ -124,12 +124,12 @@ final class ClientTests: XCTestCase {
         
         // - Check rejection
         
-        var messages: [Chat.Message] = [
+        let messages: [Chat.Message] = [
             .system("You are a helpful AI assistant. Who will use a tool to help you when needed."),
             .user("What is the town I am in now called? What is 23 + 58 ?"),
         ]
         
-        let (messageHistory, response) = try await ollama.chat(
+        let (_, response) = try await ollama.chat(
             model: "llama3.2",
             messages: messages,
             tools: tools,
@@ -146,7 +146,7 @@ final class ClientTests: XCTestCase {
         
         // - Check approval
         
-        let (approvedMessageHistory, approvedResponse) = try await ollama.chat(
+        let (_, approvedResponse) = try await ollama.chat(
             model: "llama3.2",
             messages: messages,
             tools: tools,

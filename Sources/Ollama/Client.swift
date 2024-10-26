@@ -26,8 +26,8 @@ open class Client {
     /// The underlying client session.
     internal(set) public var session: URLSession
 	
-	/// A list of tools to include in chat requests
-	var tools: [Chat.Tool] = []
+	/// A list of tools to include in all chat requests automatically.
+	public var tools: [Chat.Tool] = []
 
     /// Creates a client with the specified session, host, and user agent.
     ///
@@ -403,7 +403,7 @@ extension Client {
     /// Processes the tool calls, runs the tools, and records the results.
     /// - Parameters:
     ///   - toolCalls: The tool calls to process
-    ///   - tools: The tools to use, defaults to using `self.tools`
+    ///   - tools: Override the list of tools to be used processing this request, defaults to using `self.tools`.
     /// - Returns: The results of each tool call and a formatted Chat.Message to use to reply to the assistant.
     public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall], tools: [Chat.Tool]? = nil) throws -> ([ToolCallResult], Chat.Message) {
         var responses: [ToolCallResult] = []

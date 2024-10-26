@@ -5,9 +5,9 @@ extension Chat {
     /// A tool provided to the LLM
     public struct Tool {
         /// The definition included in the API calls
-        let definition: ToolDefinition
+        public let definition: ToolDefinition
         /// The action to be run when this tool is called on by the AI
-        let action: ([String: Value]) -> Value
+        public let action: ([String: Value]) -> Value
         
         /// A parameter passed into the function
         public struct ToolParameter {
@@ -28,13 +28,16 @@ extension Chat {
             }
             
             /// The name of this parameter
-            let name: String
+            public let name: String
+            
             /// The human readable description of what the parameter does.
-            let description: String
+            public let description: String
+            
             /// The object type of this parameter
-            let parameterType: ParameterType
+            public let parameterType: ParameterType
+            
             /// Is this parameter required
-            let required: Bool
+            public let required: Bool
         }
         
         /// Creates a function tool to be used by the LLM
@@ -98,29 +101,47 @@ extension Chat {
             
             self.action = action
         }
+        
+        /// Creates a function tool to be used by the LLM
+        /// - Parameters:
+        ///   - definition: The definition included in the API calls
+        ///   - action: The closure to be called to run this action
+        init(definition: ToolDefinition, action: @escaping ([String : Value]) -> Value) {
+            self.definition = definition
+            self.action = action
+        }
     }
     
     /// The information about the tool given provided to the AI assistant.
     public struct ToolDefinition: Hashable, Codable {
+        /// Create a tool definition for the LLM
+        /// - Parameters:
+        ///   - type: What type of tool is this
+        ///   - function: The function definition which should be sent to the LLM
+        public init(type: Chat.ToolDefinition.ToolType, function: Chat.ToolDefinition.FunctionDefinition) {
+            self.type = type
+            self.function = function
+        }
+        
         /// The role of the message sender.
         public enum ToolType: String, Hashable, CaseIterable, Codable {
             /// Represents a tool which provides a function to the LLM
             case function
         }
         /// The type of tool
-        let type: ToolType
+        public let type: ToolType
         
         /// Information about the function
-        struct FunctionDefinition: Hashable, Codable {
-            /// The name of the function
-            let name: String
-            /// The human readable description of what the function does
-            let description: String
-            /// The parameter's the function takes
-            let parameters: [String: Value]
+       public struct FunctionDefinition: Hashable, Codable {
+           /// The name of the function
+           public let name: String
+           /// The human readable description of what the function does
+           public let description: String
+           /// The parameter's the function takes
+           public let parameters: [String: Value]
         }
         /// The function this tool provides
-        let function: FunctionDefinition
+        public let function: FunctionDefinition
     }
     
 }

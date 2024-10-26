@@ -246,8 +246,8 @@ extension Value: ExpressibleByStringInterpolation {
 // MARK: - JSON Helper
 
 extension Value {
-    /// Convert the value to a Double if it is representable as a double,
-    /// otherwise nil
+    /// Convert the value to a `Double` if it is representable as a `Double`,
+    /// otherwise returns `nil`.
     public var asDoubleValue: Double? {
         switch self {
             case .int(let value):

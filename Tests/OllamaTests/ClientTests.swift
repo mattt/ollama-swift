@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import Ollama
+import Ollama
 
 final class ClientTests: XCTestCase {
     let ollama = Ollama.Client.default

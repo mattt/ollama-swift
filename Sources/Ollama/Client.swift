@@ -370,7 +370,10 @@ extension Client {
         )
         
         // n.b. Processes tool calls serially (without concurrency)
-        // TODO: Include a client configuration `AsyncStrategy` and allow for an ordered concurrent strategy
+        // TODO: Include a client configuration `ToolStrategy` and allow for other strategies
+        // - Serial
+        // - Interrupt
+        // - Concurrent (ordered)
         if let toolCalls = response.message.tool_calls
         {
             let (_, replyMessage) = try await self.processToolCalls(toolCalls)

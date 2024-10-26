@@ -38,7 +38,13 @@ extension Chat {
             
             /// Is this parameter required
             public let required: Bool
-
+			
+			/// Create a tool parameter description to be passed to the LLM
+			/// - Parameters:
+			///   - name: The name of this parameter
+			///   - description: The human readable description of what the parameter does
+			///   - parameterType: The object type of this parameter
+			///   - required: Is this parameter required
             public init(name: String, description: String, parameterType: ParameterType, required: Bool) {
                 self.name = name
                 self.description = description
@@ -146,7 +152,12 @@ extension Chat {
            public let description: String
            /// The parameter's the function takes
            public let parameters: [String: Value]
-
+		   
+		   /// Create a function definition to be passed to the LLM
+		   /// - Parameters:
+		   ///   - name: The name of the function.
+		   ///   - description: The human readable description of what the function does.
+		   ///   - parameters: The parameter's the function takes in.
            public init(name: String, description: String, parameters: [String : Value]) {
                self.name = name
                self.description = description

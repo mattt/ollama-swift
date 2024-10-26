@@ -25,9 +25,6 @@ open class Client {
 
     /// The underlying client session.
     internal(set) public var session: URLSession
-	
-	/// A list of tools to include in all chat requests automatically.
-	public var tools: [Chat.Tool] = []
 
     /// Creates a client with the specified session, host, and user agent.
     ///
@@ -272,6 +269,8 @@ extension Client {
 // MARK: - Chat
 
 extension Client {
+    
+    /// The chat response from the API to a chat request
     public struct ChatResponse: Hashable, Decodable {
         public let model: Model.ID
         public let createdAt: Date
@@ -298,6 +297,9 @@ extension Client {
             case evalDuration = "eval_duration"
         }
     }
+    
+    /// An async closure which allows you to approve or disallow a tool call. Accepts a `ToolCall` and the `Chat.Tool` which will be run.
+    public typealias ToolCallApproval = (Chat.Message.ToolCall, Chat.Tool) async -> Bool
 
     /// Generates the next message in a chat with a provided model.
     ///
@@ -306,95 +308,62 @@ extension Client {
     ///   - messages: The messages of the chat, used to keep a chat memory.
     ///   - options: Additional model parameters as specified in the Modelfile documentation.
     ///   - tools: Override the list of tools to include in this chat.
+    ///   - toolApproval: Handle approving or rejecting each tool call. Default is to auto run all tools. If `nil`  the message from Ollama will be directly returned to you to process on your own without running any tools.
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
-    /// - Returns: A `ChatResponse` containing the generated message and additional information.
+    /// - Returns: A tuple of, the array of previous chat messages this response is replying to, and a `ChatResponse` containing the generated message and additional information.
     /// - Throws: An error if the request fails or the response cannot be decoded.
     public func chat(
         model: Model.ID,
         messages: [Chat.Message],
         options: [String: Value]? = nil,
-        tools: [Chat.ToolDefinition]? = nil,
+        tools: [Chat.Tool]? = nil,
+        toolApproval: ToolCallApproval? = { _, _ in return true },
         template: String? = nil
     )
-        async throws -> ChatResponse
+        async throws -> ([Chat.Message], ChatResponse)
     {
-        let toolDefinitions: [Chat.ToolDefinition] = tools ?? self.tools.map({ $0.definition })
-        
         var params: [String: Value] = [
             "model": .string(model.rawValue),
             "messages": try Value(messages),
             "stream": false,
         ]
-
+        
         if let options {
             params["options"] = .object(options)
         }
-
+        
         if let template {
             params["template"] = .string(template)
         }
         
-        if toolDefinitions.count > 0 {
-            params["tools"] = try Value(toolDefinitions)
+        if let tools, tools.count > 0 {
+            params["tools"] = try Value(tools.map({ $0.definition }))
         }
         
-        return try await fetch(.post, "/api/chat", params: params)
+        let response: ChatResponse = try await fetch(.post, "/api/chat", params: params)
         
-    }
-    
-    /// Generates the next message in a chat with a provided model.
-    ///
-    /// - Parameters:
-    ///   - model: The name of the model to use for the chat.
-    ///   - messages: The messages of the chat, used to keep a chat memory.
-    ///   - options: Additional model parameters as specified in the Modelfile documentation.
-    ///   - tools: Override the list of tools to include in this chat.
-    ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
-    /// - Returns: A `ChatResponse` containing the generated message and additional information.
-    /// - Throws: An error if the request fails or the response cannot be decoded.
-    public func autoRunChat(
-        model: Model.ID,
-        messages: [Chat.Message],
-        options: [String: Value]? = nil,
-        tools: [Chat.ToolDefinition]? = nil,
-        template: String? = nil
-    )
-    async throws -> ([Chat.Message], ChatResponse)
-    {
-        let response: ChatResponse = try await chat(
-            model: model,
-            messages: messages,
-            options: options,
-            tools: tools,
-            template: template
-        )
-        
-        // n.b. Processes tool calls serially (without concurrency)
-        // TODO: Include a client configuration `ToolStrategy` and allow for other strategies
-        // - Serial
-        // - Interrupt
-        // - Concurrent (ordered)
-        if let toolCalls = response.message.tool_calls
+        if let toolCalls = response.message.tool_calls,
+           let tools = tools,
+           let toolApproval = toolApproval
         {
-            let (_, replyMessage) = try await self.processToolCalls(toolCalls)
-
+            let (_, replyMessage) = try await self.processToolCalls(toolCalls, tools: tools, toolCallApproval: toolApproval)
+            
             var newMessages: [Chat.Message] = messages
             newMessages.append(response.message)
             newMessages.append(replyMessage)
             
-            let response: ChatResponse = try await chat(
+            return try await chat(
                 model: model,
                 messages: newMessages,
                 options: options,
                 tools: tools,
                 template: template
             )
-            
-            return (newMessages, response)
         }
         else {
             return (messages, response)
         }
+        
     }
     
     /// Used to return the function call results back to the LLM
@@ -408,22 +377,26 @@ extension Client {
     /// Processes the tool calls, runs the tools, and records the results.
     /// - Parameters:
     ///   - toolCalls: The tool calls to process
-    ///   - tools: Override the list of tools to be used processing this request, defaults to using `self.tools`.
+    ///   - tools: The list of tools to be used processing this request
+    ///   - toolCallApproval: Optional async closure which allows you to approve or disallow each desired function call, defaults to allowing all function calls.
     /// - Returns: The results of each tool call and a formatted Chat.Message to use to reply to the assistant.
-    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall], tools: [Chat.Tool]? = nil) async throws -> ([ToolCallResult], Chat.Message) {
-        let tools: [Chat.Tool] = tools ?? self.tools
-        
+    public func processToolCalls(_ toolCalls: [Chat.Message.ToolCall], tools: [Chat.Tool], toolCallApproval: ToolCallApproval? = nil) async throws -> ([ToolCallResult], Chat.Message) {
         var responses: [ToolCallResult] = []
+        
+        guard tools.count > 0 else { return (responses, Chat.Message.tool("")) }
+        
         for toolCall in toolCalls {
             if let matchingTool = tools.first(where: { $0.definition.function.name == toolCall.function.name })
             {
+                let toolApproved = (await toolCallApproval?(toolCall, matchingTool)) ?? true
+                
                 responses.append(ToolCallResult(
                     function: matchingTool.definition.function.name,
-                    result: try await matchingTool.action(toolCall.function.arguments)
+                    result: toolApproved ? try await matchingTool.action(toolCall.function.arguments) : Value.null
                 ))
             }
         }
-
+        
         let encoder = JSONEncoder()
         encoder.outputFormatting = [ .sortedKeys ]
         
@@ -673,19 +646,19 @@ extension Client {
     /// A response containing information about a model.
     public struct ShowModelResponse: Decodable {
         /// The contents of the Modelfile for the model.
-        public let modelfile: String
+        let modelfile: String
 
         /// The model parameters.
-        public let parameters: String
+        let parameters: String
 
         /// The prompt template used by the model.
-        public let template: String
+        let template: String
 
         /// Detailed information about the model.
-        public let details: Model.Details
+        let details: Model.Details
 
         /// Additional model information.
-        public let info: [String: Value]
+        let info: [String: Value]
 
         private enum CodingKeys: String, CodingKey {
             case modelfile

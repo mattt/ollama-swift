@@ -3,7 +3,7 @@ import XCTest
 @testable import Ollama
 
 final class ClientTests: XCTestCase {
-    let ollama = Ollama.Client.default
+    @MainActor let ollama = Ollama.Client.default
 
     func testGenerateWithImage() async throws {
         // Create a transparent 1x1 pixel image

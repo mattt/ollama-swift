@@ -10,12 +10,12 @@ import Foundation
 /// allowing you to generate text, chat, create embeddings, and manage models.
 ///
 /// - SeeAlso: [Ollama API Documentation](https://github.com/ollama/ollama/blob/main/docs/api.md)
-open class Client {
+open class Client: @unchecked Sendable {
     /// The default host URL for the Ollama API.
     public static let defaultHost = URL(string: "http://localhost:11434")!
 
     /// A default client instance using the default host.
-    public static let `default` = Client(host: Client.defaultHost)
+    @MainActor public static let `default` = Client(host: Client.defaultHost)
 
     /// The host URL for requests made by the client.
     public let host: URL

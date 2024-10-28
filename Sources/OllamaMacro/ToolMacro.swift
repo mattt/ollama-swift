@@ -130,7 +130,7 @@ public struct ToolMacro: PeerMacro {
 
         // Handle async and throws modifiers
         let isAsync = funcDecl.signature.effectSpecifiers?.asyncSpecifier != nil
-        let isThrows = funcDecl.signature.effectSpecifiers?.throwsSpecifier != nil
+        let isThrows = funcDecl.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil
 
         let awaitPrefix = isAsync ? "await " : ""
         let tryPrefix = isThrows ? "try " : ""

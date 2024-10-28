@@ -36,8 +36,8 @@ struct ToolTests {
                         ]
                     }
 
-                    static func call(location: String) throws -> Output {
-                        getCurrentWeather(in: location)
+                    static func call(_ input: Input) -> Output {
+                        getCurrentWeather(in: input)
                     }
                 }
                 """,
@@ -80,8 +80,8 @@ struct ToolTests {
                         ]
                     }
 
-                    static func call(firstName: String, lastName: String) throws -> Output {
-                        greet(firstName: firstName, lastName: lastName)
+                    static func call(_ input: Input) -> Output {
+                        greet(firstName: input.firstName, lastName: input.lastName)
                     }
                 }
                 """,
@@ -118,16 +118,14 @@ struct ToolTests {
                         ]
                     }
 
-                    static func call(message: String) throws -> Output {
-                        log(message: message)
+                    static func call(_ input: Input) -> Output {
+                        log(message: input)
                     }
                 }
                 """,
             macros: testMacros
         )
     }
-
-    // ... existing test cases ...
 
     @Test func integerParameterFunction() {
         assertMacroExpansion(
@@ -164,8 +162,8 @@ struct ToolTests {
                         ]
                     }
 
-                    static func call(x: Int, y: Int) throws -> Output {
-                        add(x: x, y: y)
+                    static func call(_ input: Input) -> Output {
+                        add(x: input.x, y: input.y)
                     }
                 }
                 """,

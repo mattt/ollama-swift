@@ -1,5 +1,6 @@
 import Ollama
 import Testing
+import Foundation
 
 /// Get the current weather for a given location
 /// - Parameter location: The location to get the weather for
@@ -9,10 +10,10 @@ func getCurrentWeather(in location: String) -> String {
 }
 
 struct WeatherToolTests {
-    @Test func usage() {
+    @Test func usage() throws {
         #expect(getCurrentWeather(in: "Cupertino, CA") == "Sunny and 72°F")
 
-        let weatherResult = try? Tool_getCurrentWeather.call(location: "Cupertino, CA")
+        let weatherResult = try Tool_getCurrentWeather.call("Cupertino, CA")
         #expect(weatherResult == "Sunny and 72°F")
     }
 
@@ -41,8 +42,9 @@ func add(x: Int, y: Int) -> Int {
 }
 
 struct AddToolTests {
-    @Test func usage() {
-        let sumResult = try? Tool_add.call(x: 1, y: 2)
+    @Test func usage() throws {
+        let input = Tool_add.Input(x: 1, y: 2)
+        let sumResult = try Tool_add.call(input)
         #expect(sumResult == 3)
     }
 
@@ -62,7 +64,7 @@ struct AddToolTests {
     }
 }
 
-enum HexColorTool: Tool {
+enum HexColorTool {
     struct Input: Codable {
         let red: Double
         let green: Double
@@ -82,17 +84,20 @@ enum HexColorTool: Tool {
         ]
     }
 
-    static func call(red: Double, green: Double, blue: Double) throws -> Output {
-        let r = min(max(Int(red * 255), 0), 255)
-        let g = min(max(Int(green * 255), 0), 255)
-        let b = min(max(Int(blue * 255), 0), 255)
+    static func call(_ input: Input) throws -> Output {
+        let r = min(max(Int(input.red * 255), 0), 255)
+        let g = min(max(Int(input.green * 255), 0), 255)
+        let b = min(max(Int(input.blue * 255), 0), 255)
         return String(format: "#%02X%02X%02X", r, g, b)
     }
 }
 
+extension HexColorTool: Tool {}
+
 struct HexColorToolTests {
-    @Test func usage() {
-        let result = try? HexColorTool.call(red: 1.0, green: 0.0, blue: 0.0)
+    @Test func usage() throws {
+        let input = HexColorTool.Input(red: 1.0, green: 0.0, blue: 0.0)
+        let result = try HexColorTool.call(input)
         #expect(result == "#FF0000")
     }
 }

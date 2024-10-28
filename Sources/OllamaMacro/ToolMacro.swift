@@ -39,7 +39,7 @@ public struct ToolMacro: PeerMacro {
                     ]
                 }
 
-                static func call(\(generateCallParameters(from: funcDecl.signature.parameterClause))) throws -> Output {
+                static func call(_ input: Input)\(funcDecl.signature.effectSpecifiers?.description ?? "") -> Output {
                     \(generateFunctionCall(funcDecl: funcDecl))
                 }
             }
@@ -69,15 +69,6 @@ public struct ToolMacro: PeerMacro {
             """
 
         return inputStruct
-    }
-
-    private static func generateCallParameters(from parameters: FunctionParameterClauseSyntax)
-        -> String
-    {
-        return parameters.parameters.map { param in
-            let paramName = param.secondName?.text ?? param.firstName.text
-            return "\(paramName): \(param.type)"
-        }.joined(separator: ", ")
     }
 
     private static func mapSwiftTypeToJSON(_ swiftType: String) -> String {
@@ -126,14 +117,25 @@ public struct ToolMacro: PeerMacro {
     }
 
     private static func generateFunctionCall(funcDecl: FunctionDeclSyntax) -> String {
-        let descriptions = extractParameterDescriptions(from: funcDecl)
         let params = funcDecl.signature.parameterClause.parameters
         let arguments = params.map { param in
-            let argName = getParameterName(param: param, descriptions: descriptions)
-            return "\(param.firstName.trimmed): \(argName)"
+            if params.count == 1 {
+                // For single parameter, input is the parameter value directly
+                return "\(param.firstName.trimmed): input"
+            } else {
+                // For multiple parameters, input is a struct with properties
+                return "\(param.firstName.trimmed): input.\(param.firstName.text)"
+            }
         }.joined(separator: ", ")
 
-        return "\(funcDecl.name.text)(\(arguments))"
+        // Handle async and throws modifiers
+        let isAsync = funcDecl.signature.effectSpecifiers?.asyncSpecifier != nil
+        let isThrows = funcDecl.signature.effectSpecifiers?.throwsSpecifier != nil
+
+        let awaitPrefix = isAsync ? "await " : ""
+        let tryPrefix = isThrows ? "try " : ""
+
+        return "\(tryPrefix)\(awaitPrefix)\(funcDecl.name.text)(\(arguments))"
     }
 
     private static func extractDescription(from funcDecl: FunctionDeclSyntax) -> String {

@@ -2,7 +2,7 @@ import Foundation
 import RegexBuilder
 
 /// Regex pattern for data URLs
-private let dataURLRegex = Regex {
+nonisolated(unsafe) private let dataURLRegex = Regex {
     "data:"
     Capture {
         ZeroOrMore(.reluctant) {

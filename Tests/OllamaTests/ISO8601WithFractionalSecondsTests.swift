@@ -1,61 +1,72 @@
-import XCTest
+import Foundation
+import Testing
 
-@testable import Ollama
-
-let decoder: JSONDecoder = {
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601WithFractionalSeconds
-    return decoder
-}()
-
-let utcCalendar = {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = TimeZone(identifier: "UTC")!
-    return calendar
-}()
-
-final class JSONDecoderExtensionsTests: XCTestCase {
-    func testDecodeISO8601WithFractionalSeconds() throws {
-        let json = #""2023-04-15T12:30:45.123Z""#
-        let result = try decoder.decode(Date.self, from: json.data(using: .utf8)!)
-
-        let components = utcCalendar.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second, .nanosecond], from: result)
-
-        XCTAssertEqual(components.year, 2023)
-        XCTAssertEqual(components.month, 4)
-        XCTAssertEqual(components.day, 15)
-        XCTAssertEqual(components.hour, 12)
-        XCTAssertEqual(components.minute, 30)
-        XCTAssertEqual(components.second, 45)
-        XCTAssertEqual(components.nanosecond!, 123_000_000, accuracy: 100)
+struct ISO8601WithFractionalSecondsTests {
+    struct TestContainer: Codable {
+        let date: Date
     }
 
-    func testDecodeISO8601WithoutFractionalSeconds() throws {
-        let json = #""2023-04-15T12:30:45Z""#
-        let result = try decoder.decode(Date.self, from: json.data(using: .utf8)!)
+    let calendar: Calendar
+    let decoder: JSONDecoder
+    let encoder: JSONEncoder
 
-        let components = utcCalendar.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second, .nanosecond], from: result)
+    init() {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        calendar = utc
 
-        XCTAssertEqual(components.year, 2023)
-        XCTAssertEqual(components.month, 4)
-        XCTAssertEqual(components.day, 15)
-        XCTAssertEqual(components.hour, 12)
-        XCTAssertEqual(components.minute, 30)
-        XCTAssertEqual(components.second, 45)
-        XCTAssertEqual(components.nanosecond, 0)
+        decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601WithFractionalSeconds
+
+        encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
     }
 
-    func testDecodeInvalidDate() {
+    @Test
+    func testDecodingISO8601WithFractionalSeconds() throws {
+        let json = #"{"date": "2023-01-01T12:34:56.789Z"}"#
+        let container = try decoder.decode(TestContainer.self, from: json.data(using: .utf8)!)
+
+        let components = calendar.dateComponents(
+            [.year, .month, .day, .hour, .minute, .second, .nanosecond], from: container.date)
+
+        #expect(components.year == 2023)
+        #expect(components.month == 1)
+        #expect(components.day == 1)
+        #expect(components.hour == 12)
+        #expect(components.minute == 34)
+        #expect(components.second == 56)
+        #expect(abs((components.nanosecond ?? 0) - 789_000_000) < 1_000)
+    }
+
+    @Test
+    func testDecodingISO8601WithoutFractionalSeconds() throws {
+        let json = #"{"date": "2023-04-15T12:30:45Z"}"#
+        let container = try decoder.decode(TestContainer.self, from: json.data(using: .utf8)!)
+
+        let components = calendar.dateComponents(
+            [.year, .month, .day, .hour, .minute, .second, .nanosecond], from: container.date)
+
+        #expect(components.year == 2023)
+        #expect(components.month == 4)
+        #expect(components.day == 15)
+        #expect(components.hour == 12)
+        #expect(components.minute == 30)
+        #expect(components.second == 45)
+        #expect(components.nanosecond == 0)
+    }
+
+    @Test
+    func testDecodeInvalidDate() throws {
         let json = #""invalid""#
-        XCTAssertThrowsError(try decoder.decode(Date.self, from: json.data(using: .utf8)!)) {
-            error in
-            guard case DecodingError.dataCorrupted(let context) = error else {
-                XCTFail("Expected DecodingError.dataCorrupted, got \(error)")
-                return
-            }
-            XCTAssertEqual(context.debugDescription, "Invalid date: invalid")
+
+        do {
+            _ = try decoder.decode(Date.self, from: json.data(using: .utf8)!)
+            Issue.record("Expected DecodingError.dataCorrupted")
+        } catch DecodingError.dataCorrupted(let context) {
+            #expect(context.debugDescription == "Invalid date: invalid")
+        } catch {
+            Issue.record("Expected DecodingError.dataCorrupted, got \(error)")
         }
     }
 }

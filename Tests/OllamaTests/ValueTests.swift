@@ -1,103 +1,190 @@
-import XCTest
+import Testing
 
 @testable import Ollama
 
-final class ValueTests: XCTestCase {
-    func testBoolConversion() {
-        // Strict mode
-        XCTAssertEqual(Bool(Value.bool(true)), true)
-        XCTAssertEqual(Bool(Value.bool(false)), false)
-        XCTAssertNil(Bool(Value.int(1)))
-        XCTAssertNil(Bool(Value.string("true")))
+struct ValueTests {
+    @Suite("Bool value conversions")
+    struct BoolTests {
+        @Test("Bool conversion in strict mode")
+        func strict() {
+            let cases = [
+                (Value.bool(true), true),
+                (Value.bool(false), false),
+                (Value.int(1), nil),
+                (Value.string("true"), nil),
+            ]
 
-        // Non-strict mode - numbers
-        XCTAssertEqual(Bool(Value.int(1), strict: false), true)
-        XCTAssertEqual(Bool(Value.int(0), strict: false), false)
-        XCTAssertNil(Bool(Value.int(2), strict: false))
+            for (value, expected) in cases {
+                #expect(Bool(value) == expected)
+            }
+        }
 
-        XCTAssertEqual(Bool(Value.double(1.0), strict: false), true)
-        XCTAssertEqual(Bool(Value.double(0.0), strict: false), false)
-        XCTAssertNil(Bool(Value.double(0.5), strict: false))
+        @Suite("Bool conversion in non-strict mode")
+        struct NonStrict {
+            @Test("Bool conversion from numbers")
+            func numbers() {
+                let cases = [
+                    (Value.int(1), true),
+                    (Value.int(0), false),
+                    (Value.int(2), nil),
+                    (Value.double(1.0), true),
+                    (Value.double(0.0), false),
+                    (Value.double(0.5), nil),
+                ]
 
-        // Non-strict mode - lowercase strings only
-        XCTAssertEqual(Bool(Value.string("true"), strict: false), true)
-        XCTAssertEqual(Bool(Value.string("t"), strict: false), true)
-        XCTAssertEqual(Bool(Value.string("yes"), strict: false), true)
-        XCTAssertEqual(Bool(Value.string("y"), strict: false), true)
-        XCTAssertEqual(Bool(Value.string("on"), strict: false), true)
-        XCTAssertEqual(Bool(Value.string("1"), strict: false), true)
+                for (value, expected) in cases {
+                    #expect(Bool(value, strict: false) == expected)
+                }
+            }
 
-        XCTAssertEqual(Bool(Value.string("false"), strict: false), false)
-        XCTAssertEqual(Bool(Value.string("f"), strict: false), false)
-        XCTAssertEqual(Bool(Value.string("no"), strict: false), false)
-        XCTAssertEqual(Bool(Value.string("n"), strict: false), false)
-        XCTAssertEqual(Bool(Value.string("off"), strict: false), false)
-        XCTAssertEqual(Bool(Value.string("0"), strict: false), false)
+            @Test("Bool conversion from strings")
+            func strings() {
+                let cases = [
+                    // True cases
+                    (Value.string("true"), true),
+                    (Value.string("t"), true),
+                    (Value.string("yes"), true),
+                    (Value.string("y"), true),
+                    (Value.string("on"), true),
+                    (Value.string("1"), true),
 
-        // Non-strict mode - uppercase should fail
-        XCTAssertNil(Bool(Value.string("TRUE"), strict: false))
-        XCTAssertNil(Bool(Value.string("YES"), strict: false))
-        XCTAssertNil(Bool(Value.string("False"), strict: false))
-        XCTAssertNil(Bool(Value.string("No"), strict: false))
+                    // False cases
+                    (Value.string("false"), false),
+                    (Value.string("f"), false),
+                    (Value.string("no"), false),
+                    (Value.string("n"), false),
+                    (Value.string("off"), false),
+                    (Value.string("0"), false),
+
+                    // Nil cases
+                    (Value.string("TRUE"), nil),
+                    (Value.string("YES"), nil),
+                    (Value.string("False"), nil),
+                    (Value.string("No"), nil),
+                    (Value.string("invalid"), nil),
+                ]
+
+                for (value, expected) in cases {
+                    #expect(Bool(value, strict: false) == expected)
+                }
+            }
+        }
     }
 
-    func testIntConversions() throws {
-        // Strict mode
-        XCTAssertEqual(Int(Value.int(42), strict: true), 42)
-        XCTAssertNil(Int(Value.double(42.0), strict: true))
-        XCTAssertNil(Int(Value.string("42"), strict: true))
+    @Suite("Int value conversions")
+    struct IntTests {
+        @Test("Int conversion in strict mode")
+        func strict() {
+            let cases = [
+                (Value.int(42), 42),
+                (Value.double(42.0), nil),
+                (Value.string("42"), nil),
+            ]
 
-        // Non-strict mode
-        XCTAssertEqual(Int(Value.double(42.0), strict: false), 42)
-        XCTAssertNil(Int(Value.double(42.5), strict: false))
-        XCTAssertEqual(Int(Value.string("42"), strict: false), 42)
-        XCTAssertNil(Int(Value.string("42.5"), strict: false))
-        XCTAssertNil(Int(Value.string("invalid"), strict: false))
+            for (value, expected) in cases {
+                #expect(Int(value, strict: true) == expected)
+            }
+        }
+
+        @Test("Int conversion in non-strict mode")
+        func nonStrict() {
+            let cases = [
+                (Value.double(42.0), 42),
+                (Value.double(42.5), nil),
+                (Value.string("42"), 42),
+                (Value.string("42.5"), nil),
+                (Value.string("invalid"), nil),
+            ]
+
+            for (value, expected) in cases {
+                #expect(Int(value, strict: false) == expected)
+            }
+        }
     }
 
-    func testDoubleConversions() throws {
-        // Strict mode
-        XCTAssertEqual(Double(Value.double(42.5), strict: true), 42.5)
-        XCTAssertEqual(Double(Value.int(42), strict: true), 42.0)
-        XCTAssertNil(Double(Value.string("42.5"), strict: true))
+    @Suite("Double value conversions")
+    struct DoubleTests {
+        @Test("Double conversion in strict mode")
+        func strict() {
+            let cases = [
+                (Value.double(42.5), 42.5),
+                (Value.int(42), 42.0),
+                (Value.string("42.5"), nil),
+            ]
 
-        // Non-strict mode
-        XCTAssertEqual(Double(Value.string("42.5"), strict: false), 42.5)
-        XCTAssertEqual(Double(Value.string("42"), strict: false), 42.0)
-        XCTAssertNil(Double(Value.string("invalid"), strict: false))
+            for (value, expected) in cases {
+                #expect(Double(value, strict: true) == expected)
+            }
+        }
+
+        @Test("Double conversion in non-strict mode")
+        func nonStrict() {
+            let cases = [
+                (Value.string("42.5"), 42.5),
+                (Value.string("42"), 42.0),
+                (Value.string("invalid"), nil),
+            ]
+
+            for (value, expected) in cases {
+                #expect(Double(value, strict: false) == expected)
+            }
+        }
     }
 
-    func testStringConversions() throws {
-        // Strict mode
-        XCTAssertEqual(String(Value.string("hello"), strict: true), "hello")
-        XCTAssertNil(String(Value.int(42), strict: true))
-        XCTAssertNil(String(Value.double(42.5), strict: true))
-        XCTAssertNil(String(Value.bool(true), strict: true))
+    @Suite("String value conversions")
+    struct StringTests {
+        @Test("String conversion in strict mode")
+        func strict() {
+            let cases = [
+                (Value.string("hello"), "hello"),
+                (Value.int(42), nil),
+                (Value.double(42.5), nil),
+                (Value.bool(true), nil),
+            ]
 
-        // Non-strict mode
-        XCTAssertEqual(String(Value.int(42), strict: false), "42")
-        XCTAssertEqual(String(Value.double(42.5), strict: false), "42.5")
-        XCTAssertEqual(String(Value.bool(true), strict: false), "true")
-        XCTAssertEqual(String(Value.bool(false), strict: false), "false")
+            for (value, expected) in cases {
+                #expect(String(value, strict: true) == expected)
+            }
+        }
+
+        @Test("String conversion in non-strict mode")
+        func nonStrict() {
+            let cases = [
+                (Value.int(42), "42"),
+                (Value.double(42.5), "42.5"),
+                (Value.bool(true), "true"),
+                (Value.bool(false), "false"),
+            ]
+
+            for (value, expected) in cases {
+                #expect(String(value, strict: false) == expected)
+            }
+        }
     }
 
-    func testEdgeCases() throws {
-        // Test null values
-        XCTAssertNil(Bool(Value.null))
-        XCTAssertNil(Int(Value.null))
-        XCTAssertNil(Double(Value.null))
-        XCTAssertNil(String(Value.null))
+    @Test("Null value conversions")
+    func nullValues() {
+        #expect(Bool(Value.null) == nil)
+        #expect(Int(Value.null) == nil)
+        #expect(Double(Value.null) == nil)
+        #expect(String(Value.null) == nil)
+    }
 
-        // Test array values
-        XCTAssertNil(Bool(Value.array([.bool(true)])))
-        XCTAssertNil(Int(Value.array([.int(42)])))
-        XCTAssertNil(Double(Value.array([.double(42.5)])))
-        XCTAssertNil(String(Value.array([.string("hello")])))
+    @Test("Array value conversions")
+    func arrayValues() {
+        let array = Value.array([.bool(true)])
+        #expect(Bool(array) == nil)
+        #expect(Int(array) == nil)
+        #expect(Double(array) == nil)
+        #expect(String(array) == nil)
+    }
 
-        // Test object values
-        XCTAssertNil(Bool(Value.object(["key": .bool(true)])))
-        XCTAssertNil(Int(Value.object(["key": .int(42)])))
-        XCTAssertNil(Double(Value.object(["key": .double(42.5)])))
-        XCTAssertNil(String(Value.object(["key": .string("hello")])))
+    @Test("Object value conversions")
+    func objectValues() {
+        let object = Value.object(["key": .bool(true)])
+        #expect(Bool(object) == nil)
+        #expect(Int(object) == nil)
+        #expect(Double(object) == nil)
+        #expect(String(object) == nil)
     }
 }

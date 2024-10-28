@@ -17,7 +17,6 @@ func add(x: Int, y: Int) -> Int {
 }
 
 struct ToolTests {
-    
     @Test func exampleUsage() {
         assert(getCurrentWeather(in: "Cupertino, CA") == "Sunny and 72°F")
         

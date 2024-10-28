@@ -102,7 +102,7 @@ public struct ToolMacro: PeerMacro {
         from parameters: FunctionParameterClauseSyntax, descriptions: [String: String]
     ) -> String {
         let parameterEntries = parameters.parameters.map { param in
-            let paramName = param.secondName?.text ?? param.firstName.text
+            let paramName = getParameterName(param: param, descriptions: descriptions)
             let swiftType = param.type.description
             let jsonType = mapSwiftTypeToJSON(swiftType)
 
@@ -126,9 +126,10 @@ public struct ToolMacro: PeerMacro {
     }
 
     private static func generateFunctionCall(funcDecl: FunctionDeclSyntax) -> String {
+        let descriptions = extractParameterDescriptions(from: funcDecl)
         let params = funcDecl.signature.parameterClause.parameters
         let arguments = params.map { param in
-            let argName = param.secondName?.text ?? param.firstName.text
+            let argName = getParameterName(param: param, descriptions: descriptions)
             return "\(param.firstName.trimmed): \(argName)"
         }.joined(separator: ", ")
 
@@ -149,21 +150,66 @@ public struct ToolMacro: PeerMacro {
         String]
     {
         var descriptions: [String: String] = [:]
+        var inParametersBlock = false
+
         let docComments = funcDecl.leadingTrivia.compactMap({ trivia in
             if case .docLineComment(let comment) = trivia { return comment }
             return nil
         })
+
         for comment in docComments {
             let trimmed = comment.dropFirst(3).trimmingCharacters(in: .whitespaces)
-            if trimmed.starts(with: "- Parameter") {
-                let parts = trimmed.dropFirst(12).split(separator: ":", maxSplits: 1)
+
+            // Check for Parameters block start
+            if trimmed == "- Parameters:" {
+                inParametersBlock = true
+                continue
+            }
+
+            // Check for other directive that would end Parameters block
+            if trimmed.starts(with: "- ") && !trimmed.starts(with: "- Parameter") {
+                inParametersBlock = false
+                continue
+            }
+
+            if inParametersBlock {
+                // Handle nested parameter format
+                // Expected format: "  - paramName: description"
+                if trimmed.starts(with: "  - ") {
+                    let paramContent = trimmed.dropFirst(4).trimmingCharacters(in: .whitespaces)
+                    let parts = paramContent.split(separator: ":", maxSplits: 1)
+                    if parts.count == 2 {
+                        let paramName = String(parts[0]).trimmingCharacters(in: .whitespaces)
+                        let description = String(parts[1]).trimmingCharacters(in: .whitespaces)
+                        descriptions[paramName] = description
+                    }
+                }
+            } else if trimmed.starts(with: "- Parameter") {
+                // Handle single parameter format
+                // Expected format: "- Parameter paramName: description"
+                let parameterContent = trimmed.dropFirst("- Parameter".count).trimmingCharacters(
+                    in: .whitespaces)
+                let parts = parameterContent.split(separator: ":", maxSplits: 1)
                 if parts.count == 2 {
-                    let paramName = parts[0].trimmingCharacters(in: .whitespaces)
-                    let description = parts[1].trimmingCharacters(in: .whitespaces)
+                    let paramName = String(parts[0]).trimmingCharacters(in: .whitespaces)
+                    let description = String(parts[1]).trimmingCharacters(in: .whitespaces)
                     descriptions[paramName] = description
                 }
             }
         }
         return descriptions
+    }
+
+    private static func getParameterName(
+        param: FunctionParameterSyntax, descriptions: [String: String]
+    ) -> String {
+        // Check if the parameter is documented
+        if let documentedName = descriptions.keys.first(where: { key in
+            key == param.firstName.text || key == param.secondName?.text
+        }) {
+            return documentedName
+        }
+        // Otherwise use second name if available, falling back to first name
+        return param.secondName?.text ?? param.firstName.text
     }
 }

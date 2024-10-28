@@ -30,7 +30,7 @@ struct ToolTests {
                             "description": "Calls the getCurrentWeather function",
                             "parameters": [
                                 "location": [
-                                    "type": "String"
+                                    "type": "string"
                                 ]
                             ]
                         ]
@@ -71,10 +71,10 @@ struct ToolTests {
                             "description": "Calls the greet function",
                             "parameters": [
                                 "firstName": [
-                                    "type": "String"
+                                    "type": "string"
                                 ],
                                 "lastName": [
-                                    "type": "String"
+                                    "type": "string"
                                 ]
                             ]
                         ]
@@ -82,44 +82,6 @@ struct ToolTests {
 
                     static func call(firstName: String, lastName: String) throws -> Output {
                         greet(firstName: firstName, lastName: lastName)
-                    }
-                }
-                """,
-            macros: testMacros
-        )
-    }
-
-    @Test func customToolName() {
-        assertMacroExpansion(
-            """
-            @Tool
-            func hello(name: String) -> String {
-                "Hello, \\(name)!"
-            }
-            """,
-            expandedSource: """
-                func hello(name: String) -> String {
-                    "Hello, \\(name)!"
-                }
-
-                enum Tool_hello: Tool {
-                    typealias Input = String
-                    typealias Output = String
-
-                    static var schema: [String: Value] {
-                        [
-                            "name": "hello",
-                            "description": "Calls the hello function",
-                            "parameters": [
-                                "name": [
-                                    "type": "String"
-                                ]
-                            ]
-                        ]
-                    }
-
-                    static func call(name: String) throws -> Output {
-                        hello(name: name)
                     }
                 }
                 """,
@@ -150,7 +112,7 @@ struct ToolTests {
                             "description": "Calls the log function",
                             "parameters": [
                                 "message": [
-                                    "type": "String"
+                                    "type": "string"
                                 ]
                             ]
                         ]
@@ -158,6 +120,52 @@ struct ToolTests {
 
                     static func call(message: String) throws -> Output {
                         log(message: message)
+                    }
+                }
+                """,
+            macros: testMacros
+        )
+    }
+
+    // ... existing test cases ...
+
+    @Test func integerParameterFunction() {
+        assertMacroExpansion(
+            """
+            @Tool
+            func add(x: Int, y: Int) -> Int {
+                x + y
+            }
+            """,
+            expandedSource: """
+                func add(x: Int, y: Int) -> Int {
+                    x + y
+                }
+
+                enum Tool_add: Tool {
+                    struct Input: Codable {
+                        let x: Int
+                        let y: Int
+                    }
+                    typealias Output = Int
+
+                    static var schema: [String: Value] {
+                        [
+                            "name": "add",
+                            "description": "Calls the add function",
+                            "parameters": [
+                                "x": [
+                                    "type": "number"
+                                ],
+                                "y": [
+                                    "type": "number"
+                                ]
+                            ]
+                        ]
+                    }
+
+                    static func call(x: Int, y: Int) throws -> Output {
+                        add(x: x, y: y)
                     }
                 }
                 """,

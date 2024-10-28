@@ -34,21 +34,21 @@ struct ToolTests {
             weatherSchema["description"]?.stringValue
                 == "Get the current weather for a given location")
 
-        // if let parameters = weatherSchema["parameters"]?.objectValue {
-        //     #expect(parameters["location"]?.objectValue?["type"]?.stringValue == "string")
-        //     #expect(parameters["location"]?.objectValue?["description"]?.stringValue == "The location to get the weather for")
-        // }
+         if let parameters = weatherSchema["parameters"]?.objectValue {
+             #expect(parameters["location"]?.objectValue?["type"]?.stringValue == "string")
+             #expect(parameters["location"]?.objectValue?["description"]?.stringValue == "The location to get the weather for")
+         }
 
         let sumSchema = Tool_add.schema
         #expect(sumSchema["name"]?.stringValue == "add")
         #expect(sumSchema["description"]?.stringValue == "Add two numbers together")
 
-        // if let parameters = weatherSchema["parameters"]?.objectValue {
-        //     #expect(parameters["x"]?.objectValue?["type"]?.stringValue == "integer")
-        //     #expect(parameters["x"]?.objectValue?["description"]?.stringValue == "The first number")
+         if let parameters = weatherSchema["parameters"]?.objectValue {
+             #expect(parameters["x"]?.objectValue?["type"]?.stringValue == "number")
+             #expect(parameters["x"]?.objectValue?["description"]?.stringValue == "The first number")
 
-        //     #expect(parameters["y"]?.objectValue?["type"]?.stringValue == "integer")
-        //     #expect(parameters["y"]?.objectValue?["description"]?.stringValue == "The second number")
-        // }
+             #expect(parameters["y"]?.objectValue?["type"]?.stringValue == "number")
+             #expect(parameters["y"]?.objectValue?["description"]?.stringValue == "The second number")
+         }
     }
 }

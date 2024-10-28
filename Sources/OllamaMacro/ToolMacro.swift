@@ -80,23 +80,43 @@ public struct ToolMacro: PeerMacro {
         }.joined(separator: ", ")
     }
 
+    private static func mapSwiftTypeToJSON(_ swiftType: String) -> String {
+        switch swiftType {
+        case "String":
+            return "string"
+        case "Int", "Double", "Float":
+            return "number"
+        case "Bool":
+            return "boolean"
+        case let type where type.hasPrefix("["):
+            return "array"
+        case let type where type.hasPrefix("Dictionary"):
+            return "object"
+        default:
+            // For custom types, default to object
+            return "object"
+        }
+    }
+
     private static func generateParametersDictionary(
         from parameters: FunctionParameterClauseSyntax, descriptions: [String: String]
     ) -> String {
         let parameterEntries = parameters.parameters.map { param in
             let paramName = param.secondName?.text ?? param.firstName.text
-            let paramType = param.type.description
+            let swiftType = param.type.description
+            let jsonType = mapSwiftTypeToJSON(swiftType)
+
             if let description = descriptions[paramName] {
                 return """
                                     "\(paramName)": [
-                                        "type": "\(paramType)",
+                                        "type": "\(jsonType)",
                                         "description": "\(description)"
                                     ]
                     """
             } else {
                 return """
                                     "\(paramName)": [
-                                        "type": "\(paramType)"
+                                        "type": "\(jsonType)"
                                     ]
                     """
             }

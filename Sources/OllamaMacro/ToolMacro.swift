@@ -39,7 +39,7 @@ public struct ToolMacro: PeerMacro {
                     ]
                 }
 
-                static func call(_ input: Input)\(funcDecl.signature.effectSpecifiers?.description ?? "") -> Output {
+                static func call(_ input: Input) async throws -> Output {
                     \(generateFunctionCall(funcDecl: funcDecl))
                 }
             }

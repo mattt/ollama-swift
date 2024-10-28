@@ -36,7 +36,7 @@ struct ToolTests {
                         ]
                     }
 
-                    static func call(_ input: Input) -> Output {
+                    static func call(_ input: Input) async throws -> Output {
                         getCurrentWeather(in: input)
                     }
                 }
@@ -80,7 +80,7 @@ struct ToolTests {
                         ]
                     }
 
-                    static func call(_ input: Input) -> Output {
+                    static func call(_ input: Input) async throws -> Output {
                         greet(firstName: input.firstName, lastName: input.lastName)
                     }
                 }
@@ -118,7 +118,7 @@ struct ToolTests {
                         ]
                     }
 
-                    static func call(_ input: Input) -> Output {
+                    static func call(_ input: Input) async throws -> Output {
                         log(message: input)
                     }
                 }
@@ -162,7 +162,7 @@ struct ToolTests {
                         ]
                     }
 
-                    static func call(_ input: Input) -> Output {
+                    static func call(_ input: Input) async throws -> Output {
                         add(x: input.x, y: input.y)
                     }
                 }

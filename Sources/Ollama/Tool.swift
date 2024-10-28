@@ -9,4 +9,6 @@ public protocol Tool {
     associatedtype Output: Codable
 
     static var schema: [String: Value] { get }
+    
+    static func call(_ input: Input) async throws -> Output
 }

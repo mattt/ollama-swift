@@ -1,6 +1,6 @@
+import Foundation
 import Ollama
 import Testing
-import Foundation
 
 /// Get the current weather for a given location
 /// - Parameter location: The location to get the weather for
@@ -10,10 +10,10 @@ func getCurrentWeather(in location: String) -> String {
 }
 
 struct WeatherToolTests {
-    @Test func usage() throws {
+    @Test func usage() async throws {
         #expect(getCurrentWeather(in: "Cupertino, CA") == "Sunny and 72°F")
 
-        let weatherResult = try Tool_getCurrentWeather.call("Cupertino, CA")
+        let weatherResult = try await Tool_getCurrentWeather.call("Cupertino, CA")
         #expect(weatherResult == "Sunny and 72°F")
     }
 
@@ -42,9 +42,9 @@ func add(x: Int, y: Int) -> Int {
 }
 
 struct AddToolTests {
-    @Test func usage() throws {
+    @Test func usage() async throws {
         let input = Tool_add.Input(x: 1, y: 2)
-        let sumResult = try Tool_add.call(input)
+        let sumResult = try await Tool_add.call(input)
         #expect(sumResult == 3)
     }
 
@@ -84,7 +84,7 @@ enum HexColorTool {
         ]
     }
 
-    static func call(_ input: Input) throws -> Output {
+    static func call(_ input: Input) async throws -> Output {
         let r = min(max(Int(input.red * 255), 0), 255)
         let g = min(max(Int(input.green * 255), 0), 255)
         let b = min(max(Int(input.blue * 255), 0), 255)
@@ -95,9 +95,9 @@ enum HexColorTool {
 extension HexColorTool: Tool {}
 
 struct HexColorToolTests {
-    @Test func usage() throws {
+    @Test func usage() async throws {
         let input = HexColorTool.Input(red: 1.0, green: 0.0, blue: 0.0)
-        let result = try HexColorTool.call(input)
+        let result = try await HexColorTool.call(input)
         #expect(result == "#FF0000")
     }
 }

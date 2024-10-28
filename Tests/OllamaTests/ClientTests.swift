@@ -3,6 +3,7 @@ import Testing
 
 @testable import Ollama
 
+@Suite(.serialized)
 struct ClientTests {
     let ollama: Client
     

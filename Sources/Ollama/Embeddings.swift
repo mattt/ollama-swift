@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Embeddings: RawRepresentable, Hashable {
+public struct Embeddings: RawRepresentable, Hashable, Sendable {
     public let rawValue: [[Double]]
 
     public init(rawValue: [[Double]]) {

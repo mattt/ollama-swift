@@ -5,9 +5,9 @@ import struct Foundation.TimeInterval
 /// Namespace for chat-related types and functionality.
 public enum Chat {
     /// Represents a message in a chat conversation.
-    public struct Message: Hashable, Codable {
+    public struct Message: Hashable, Codable, Sendable {
         /// The role of the message sender.
-        public enum Role: String, Hashable, CaseIterable, Codable {
+        public enum Role: String, Hashable, CaseIterable, Codable, Sendable {
             /// Represents a message from the user.
             case user
             /// Represents a system message.

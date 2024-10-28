@@ -3,7 +3,7 @@ import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
 
 /// A codable value.
-public enum Value: Hashable {
+public enum Value: Hashable, Sendable {
     case null
     case bool(Bool)
     case int(Int)

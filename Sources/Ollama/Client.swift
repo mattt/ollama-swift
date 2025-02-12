@@ -132,6 +132,19 @@ open class Client {
         return request
     }
 
+    private func validateResponse(_ response: URLResponse) throws -> HTTPURLResponse {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw Error.unexpectedError("Response is not HTTPURLResponse")
+        }
+        return httpResponse
+    }
+
+    private func createDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601WithFractionalSeconds
+        return decoder
+    }
+
     func fetch<T: Decodable>(
         _ method: Method,
         _ path: String,
@@ -139,24 +152,17 @@ open class Client {
     ) async throws -> T {
         let request = try createRequest(method, path, params: params)
         let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw Error.unexpectedError("Response is not HTTPURLResponse")
-        }
+        let httpResponse = try validateResponse(response)
 
         switch httpResponse.statusCode {
         case 200..<300:
             if T.self == Bool.self {
-                // If T is Bool, we return true for successful response
                 return true as! T
             } else if data.isEmpty {
                 throw Error.responseError(response: httpResponse, detail: "Empty response body")
             } else {
-                let decoder = JSONDecoder()
-                decoder.dateDecodingStrategy = .iso8601WithFractionalSeconds
-
                 do {
-                    return try decoder.decode(T.self, from: data)
+                    return try createDecoder().decode(T.self, from: data)
                 } catch {
                     throw Error.decodingError(
                         response: httpResponse,
@@ -166,18 +172,17 @@ open class Client {
             }
         default:
             if T.self == Bool.self {
-                // If T is Bool, we return false for unsuccessful response
                 return false as! T
             }
-
+            
             if let errorDetail = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
                 throw Error.responseError(response: httpResponse, detail: errorDetail.error)
             }
-
+            
             if let string = String(data: data, encoding: .utf8) {
                 throw Error.responseError(response: httpResponse, detail: string)
             }
-
+            
             throw Error.responseError(response: httpResponse, detail: "Invalid response")
         }
     }
@@ -192,10 +197,7 @@ open class Client {
                 do {
                     let request = try createRequest(method, path, params: params)
                     let (bytes, response) = try await session.bytes(for: request)
-                    
-                    guard let httpResponse = response as? HTTPURLResponse else {
-                        throw Error.unexpectedError("Response is not HTTPURLResponse")
-                    }
+                    let httpResponse = try validateResponse(response)
                     
                     guard (200..<300).contains(httpResponse.statusCode) else {
                         var errorData = Data()
@@ -214,10 +216,9 @@ open class Client {
                         throw Error.responseError(response: httpResponse, detail: "Invalid response")
                     }
                     
-                    let decoder = JSONDecoder()
-                    decoder.dateDecodingStrategy = .iso8601WithFractionalSeconds
-                    
+                    let decoder = createDecoder()
                     var buffer = Data()
+                    
                     for try await byte in bytes {
                         buffer.append(byte)
                         

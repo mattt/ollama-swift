@@ -231,7 +231,7 @@ extension Client {
         system: String? = nil,
         template: String? = nil,
         context: [Int]? = nil,
-        stream: Bool = true,
+        stream: Bool = false,
         raw: Bool = false
     )
         async throws -> GenerateResponse

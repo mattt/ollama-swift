@@ -28,7 +28,7 @@ final class ClientTests: XCTestCase {
         XCTAssertGreaterThan(response.loadDuration ?? 0, 0)
         XCTAssertGreaterThan(response.promptEvalCount ?? 0, 0)
     }
-
+    
     func testChatCompletion() async throws {
         let messages: [Chat.Message] = [
             .system("You are a helpful AI assistant."),
@@ -39,6 +39,13 @@ final class ClientTests: XCTestCase {
             model: "llama3.2",
             messages: messages)
         XCTAssertFalse(response.message.content.isEmpty)
+    }
+    
+    func testGenerateCompletion() async throws {
+        let response = try await ollama.generate(
+            model: "llama3.2",
+            prompt: "[System]: You are a helpful AI assistant. \n [User]: Write a haiku about llamas.")
+        XCTAssertFalse(response.response.isEmpty)
     }
 
     func testEmbed() async throws {

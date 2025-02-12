@@ -16,8 +16,7 @@ final class ClientTests: XCTestCase {
         let response = try await ollama.generate(
             model: "llama3.2",
             prompt: prompt,
-            images: [imageData],
-            stream: false
+            images: [imageData]
         )
 
         XCTAssertFalse(response.response.isEmpty)
@@ -29,6 +28,20 @@ final class ClientTests: XCTestCase {
         XCTAssertGreaterThan(response.promptEvalCount ?? 0, 0)
     }
     
+    func testGenerateStream() async throws {
+        let response = ollama.generateStream(
+            model: "llama3.2",
+            prompt: "[System]: You are a helpful AI assistant. \n [User]: Write a haiku about llamas."
+        )
+        
+        var collect: [String] = []
+        for try await res in response {
+            collect.append(res.response)
+        }
+
+        XCTAssertFalse(collect.isEmpty)
+    }
+
     func testChatCompletion() async throws {
         let messages: [Chat.Message] = [
             .system("You are a helpful AI assistant."),
@@ -40,12 +53,23 @@ final class ClientTests: XCTestCase {
             messages: messages)
         XCTAssertFalse(response.message.content.isEmpty)
     }
-    
-    func testGenerateCompletion() async throws {
-        let response = try await ollama.generate(
+
+    func testChatStream() async throws {
+        let messages: [Chat.Message] = [
+            .system("You are a helpful AI assistant."),
+            .user("Write a haiku about llamas."),
+        ]
+
+        let response = try ollama.chatStream(
             model: "llama3.2",
-            prompt: "[System]: You are a helpful AI assistant. \n [User]: Write a haiku about llamas.")
-        XCTAssertFalse(response.response.isEmpty)
+            messages: messages)
+        
+        var collect: [String] = []
+        for try await res in response {
+            collect.append(res.message.content)
+        }
+
+        XCTAssertFalse(collect.isEmpty)
     }
 
     func testEmbed() async throws {

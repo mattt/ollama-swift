@@ -87,13 +87,11 @@ open class Client {
         case delete = "DELETE"
     }
 
-    func fetch<T: Decodable>(
+    private func createRequest(
         _ method: Method,
         _ path: String,
         params: [String: Value]? = nil
-    )
-        async throws -> T
-    {
+    ) throws -> URLRequest {
         var urlComponents = URLComponents(url: host, resolvingAgainstBaseURL: true)
         urlComponents?.path = path
 
@@ -131,6 +129,15 @@ open class Client {
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         }
 
+        return request
+    }
+
+    func fetch<T: Decodable>(
+        _ method: Method,
+        _ path: String,
+        params: [String: Value]? = nil
+    ) async throws -> T {
+        let request = try createRequest(method, path, params: params)
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -172,6 +179,69 @@ open class Client {
             }
 
             throw Error.responseError(response: httpResponse, detail: "Invalid response")
+        }
+    }
+
+    func fetchStream<T: Decodable>(
+        _ method: Method,
+        _ path: String,
+        params: [String: Value]? = nil
+    ) -> AsyncThrowingStream<T, Swift.Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let request = try createRequest(method, path, params: params)
+                    let (bytes, response) = try await session.bytes(for: request)
+                    
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        throw Error.unexpectedError("Response is not HTTPURLResponse")
+                    }
+                    
+                    guard (200..<300).contains(httpResponse.statusCode) else {
+                        var errorData = Data()
+                        for try await byte in bytes {
+                            errorData.append(byte)
+                        }
+                        
+                        if let errorDetail = try? JSONDecoder().decode(ErrorResponse.self, from: errorData) {
+                            throw Error.responseError(response: httpResponse, detail: errorDetail.error)
+                        }
+                        
+                        if let string = String(data: errorData, encoding: .utf8) {
+                            throw Error.responseError(response: httpResponse, detail: string)
+                        }
+                        
+                        throw Error.responseError(response: httpResponse, detail: "Invalid response")
+                    }
+                    
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601WithFractionalSeconds
+                    
+                    var buffer = Data()
+                    for try await byte in bytes {
+                        buffer.append(byte)
+                        
+                        // Look for newline to separate JSON objects
+                        while let newlineIndex = buffer.firstIndex(of: UInt8(ascii: "\n")) {
+                            let chunk = buffer[..<newlineIndex]
+                            buffer = buffer[buffer.index(after: newlineIndex)...]
+                            
+                            if !chunk.isEmpty {
+                                let decoded = try decoder.decode(T.self, from: chunk)
+                                continuation.yield(decoded)
+                            }
+                        }
+                    }
+                    
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
         }
     }
 }
@@ -218,7 +288,6 @@ extension Client {
     ///   - system: System message to override what is defined in the Modelfile.
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
     ///   - context: The context parameter returned from a previous request to keep a short conversational memory.
-    ///   - stream: If false, the response will be returned as a single response object, rather than a stream of objects.
     ///   - raw: If true, no formatting will be applied to the prompt.
     /// - Returns: A `GenerateResponse` containing the generated text and additional information.
     /// - Throws: An error if the request fails or the response cannot be decoded.
@@ -231,7 +300,6 @@ extension Client {
         system: String? = nil,
         template: String? = nil,
         context: [Int]? = nil,
-        stream: Bool = false,
         raw: Bool = false
     )
         async throws -> GenerateResponse
@@ -239,7 +307,7 @@ extension Client {
         var params: [String: Value] = [
             "model": .string(model.rawValue),
             "prompt": .string(prompt),
-            "stream": .bool(stream),
+            "stream": .bool(false),
             "raw": .bool(raw),
         ]
 
@@ -264,6 +332,61 @@ extension Client {
 
         return try await fetch(.post, "/api/generate", params: params)
     }
+    
+    /// Generates a streaming response for a given prompt with a provided model.
+    ///
+    /// - Parameters:
+    ///   - model: The name of the model to use for generation.
+    ///   - prompt: The prompt to generate a response for.
+    ///   - images: Optional list of base64-encoded images (for multimodal models).
+    ///   - format: The format to return a response in. Currently, the only accepted value is "json".
+    ///   - options: Additional model parameters as specified in the Modelfile documentation.
+    ///   - system: System message to override what is defined in the Modelfile.
+    ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
+    ///   - context: The context parameter returned from a previous request to keep a short conversational memory.
+    ///   - raw: If true, no formatting will be applied to the prompt.
+    /// - Returns: An async throwing stream of `GenerateResponse` objects containing generated text chunks and additional information.
+    /// - Throws: An error if the request fails or responses cannot be decoded.
+    public func generateStream(
+        model: Model.ID,
+        prompt: String,
+        images: [Data]? = nil,
+        format: String? = nil,
+        options: [String: Value]? = nil,
+        system: String? = nil,
+        template: String? = nil,
+        context: [Int]? = nil,
+        raw: Bool = false
+    ) -> AsyncThrowingStream<GenerateResponse, Swift.Error> {
+        var params: [String: Value] = [
+            "model": .string(model.rawValue),
+            "prompt": .string(prompt),
+            "stream": .bool(true),
+            "raw": .bool(raw),
+        ]
+
+        if let images = images {
+            params["images"] = .array(images.map { .string($0.base64EncodedString()) })
+        }
+        if let format = format {
+            params["format"] = .string(format)
+        }
+        if let options = options {
+            params["options"] = .object(options)
+        }
+        if let system = system {
+            params["system"] = .string(system)
+        }
+        if let template = template {
+            params["template"] = .string(template)
+        }
+        if let context = context {
+            params["context"] = .array(context.map { .double(Double($0)) })
+        }
+        
+        return fetchStream(.post, "/api/generate", params: params)
+    }
+
 }
 
 // MARK: - Chat
@@ -328,6 +451,38 @@ extension Client {
         }
 
         return try await fetch(.post, "/api/chat", params: params)
+    }
+
+    /// Generates a streaming chat response with a provided model.
+    ///
+    /// - Parameters:
+    ///   - model: The name of the model to use for the chat.
+    ///   - messages: The messages of the chat, used to keep a chat memory.
+    ///   - options: Additional model parameters as specified in the Modelfile documentation.
+    ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
+    /// - Returns: An async throwing stream of `ChatResponse` objects containing generated message chunks and additional information.
+    /// - Throws: An error if the request fails or responses cannot be decoded.
+    public func chatStream(
+        model: Model.ID,
+        messages: [Chat.Message],
+        options: [String: Value]? = nil,
+        template: String? = nil
+    ) throws -> AsyncThrowingStream<ChatResponse, Swift.Error> {
+        var params: [String: Value] = [
+            "model": .string(model.rawValue),
+            "messages": try Value(messages),
+            "stream": true,
+        ]
+
+        if let options {
+            params["options"] = .object(options)
+        }
+
+        if let template {
+            params["template"] = .string(template)
+        }
+
+        return fetchStream(.post, "/api/chat", params: params)
     }
 }
 

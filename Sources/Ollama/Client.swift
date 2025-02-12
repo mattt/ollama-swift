@@ -87,64 +87,6 @@ open class Client {
         case delete = "DELETE"
     }
 
-    private func createRequest(
-        _ method: Method,
-        _ path: String,
-        params: [String: Value]? = nil
-    ) throws -> URLRequest {
-        var urlComponents = URLComponents(url: host, resolvingAgainstBaseURL: true)
-        urlComponents?.path = path
-
-        var httpBody: Data? = nil
-        switch method {
-        case .get:
-            if let params {
-                var queryItems: [URLQueryItem] = []
-                for (key, value) in params {
-                    queryItems.append(URLQueryItem(name: key, value: value.description))
-                }
-                urlComponents?.queryItems = queryItems
-            }
-        case .post, .delete:
-            if let params {
-                let encoder = JSONEncoder()
-                httpBody = try encoder.encode(params)
-            }
-        }
-
-        guard let url = urlComponents?.url else {
-            throw Error.requestError(
-                #"Unable to construct URL with host "\#(host)" and path "\#(path)""#)
-        }
-        var request: URLRequest = URLRequest(url: url)
-        request.httpMethod = method.rawValue
-
-        request.addValue("application/json", forHTTPHeaderField: "Accept")
-        if let userAgent {
-            request.addValue(userAgent, forHTTPHeaderField: "User-Agent")
-        }
-
-        if let httpBody {
-            request.httpBody = httpBody
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        }
-
-        return request
-    }
-
-    private func validateResponse(_ response: URLResponse) throws -> HTTPURLResponse {
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw Error.unexpectedError("Response is not HTTPURLResponse")
-        }
-        return httpResponse
-    }
-
-    private func createDecoder() -> JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601WithFractionalSeconds
-        return decoder
-    }
-
     func fetch<T: Decodable>(
         _ method: Method,
         _ path: String,
@@ -245,6 +187,64 @@ open class Client {
                 task.cancel()
             }
         }
+    }
+
+    private func createRequest(
+        _ method: Method,
+        _ path: String,
+        params: [String: Value]? = nil
+    ) throws -> URLRequest {
+        var urlComponents = URLComponents(url: host, resolvingAgainstBaseURL: true)
+        urlComponents?.path = path
+
+        var httpBody: Data? = nil
+        switch method {
+        case .get:
+            if let params {
+                var queryItems: [URLQueryItem] = []
+                for (key, value) in params {
+                    queryItems.append(URLQueryItem(name: key, value: value.description))
+                }
+                urlComponents?.queryItems = queryItems
+            }
+        case .post, .delete:
+            if let params {
+                let encoder = JSONEncoder()
+                httpBody = try encoder.encode(params)
+            }
+        }
+
+        guard let url = urlComponents?.url else {
+            throw Error.requestError(
+                #"Unable to construct URL with host "\#(host)" and path "\#(path)""#)
+        }
+        var request: URLRequest = URLRequest(url: url)
+        request.httpMethod = method.rawValue
+
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        if let userAgent {
+            request.addValue(userAgent, forHTTPHeaderField: "User-Agent")
+        }
+
+        if let httpBody {
+            request.httpBody = httpBody
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+
+        return request
+    }
+
+    private func validateResponse(_ response: URLResponse) throws -> HTTPURLResponse {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw Error.unexpectedError("Response is not HTTPURLResponse")
+        }
+        return httpResponse
+    }
+
+    private func createDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601WithFractionalSeconds
+        return decoder
     }
 }
 

@@ -157,6 +157,7 @@ open class Client {
         switch httpResponse.statusCode {
         case 200..<300:
             if T.self == Bool.self {
+                // If T is Bool, we return true for successful response
                 return true as! T
             } else if data.isEmpty {
                 throw Error.responseError(response: httpResponse, detail: "Empty response body")
@@ -374,7 +375,7 @@ extension Client {
             "model": .string(model.rawValue),
             "prompt": .string(prompt),
             "stream": .bool(stream),
-            "raw": .bool(raw)
+            "raw": .bool(raw),
         ]
 
         if let images = images {

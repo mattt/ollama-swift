@@ -301,35 +301,19 @@ extension Client {
         template: String? = nil,
         context: [Int]? = nil,
         raw: Bool = false
-    )
-        async throws -> GenerateResponse
-    {
-        var params: [String: Value] = [
-            "model": .string(model.rawValue),
-            "prompt": .string(prompt),
-            "stream": .bool(false),
-            "raw": .bool(raw),
-        ]
-
-        if let images = images {
-            params["images"] = .array(images.map { .string($0.base64EncodedString()) })
-        }
-        if let format = format {
-            params["format"] = .string(format)
-        }
-        if let options = options {
-            params["options"] = .object(options)
-        }
-        if let system = system {
-            params["system"] = .string(system)
-        }
-        if let template = template {
-            params["template"] = .string(template)
-        }
-        if let context = context {
-            params["context"] = .array(context.map { .double(Double($0)) })
-        }
-
+    ) async throws -> GenerateResponse {
+        let params = createGenerateParams(
+            model: model,
+            prompt: prompt,
+            images: images,
+            format: format,
+            options: options,
+            system: system,
+            template: template,
+            context: context,
+            raw: raw,
+            stream: false
+        )
         return try await fetch(.post, "/api/generate", params: params)
     }
     
@@ -358,11 +342,38 @@ extension Client {
         context: [Int]? = nil,
         raw: Bool = false
     ) -> AsyncThrowingStream<GenerateResponse, Swift.Error> {
+        let params = createGenerateParams(
+            model: model,
+            prompt: prompt,
+            images: images,
+            format: format,
+            options: options,
+            system: system,
+            template: template,
+            context: context,
+            raw: raw,
+            stream: true
+        )
+        return fetchStream(.post, "/api/generate", params: params)
+    }
+
+    private func createGenerateParams(
+        model: Model.ID,
+        prompt: String,
+        images: [Data]?,
+        format: String?,
+        options: [String: Value]?,
+        system: String?,
+        template: String?,
+        context: [Int]?,
+        raw: Bool,
+        stream: Bool
+    ) -> [String: Value] {
         var params: [String: Value] = [
             "model": .string(model.rawValue),
             "prompt": .string(prompt),
-            "stream": .bool(true),
-            "raw": .bool(raw),
+            "stream": .bool(stream),
+            "raw": .bool(raw)
         ]
 
         if let images = images {
@@ -383,10 +394,9 @@ extension Client {
         if let context = context {
             params["context"] = .array(context.map { .double(Double($0)) })
         }
-        
-        return fetchStream(.post, "/api/generate", params: params)
-    }
 
+        return params
+    }
 }
 
 // MARK: - Chat
@@ -433,23 +443,14 @@ extension Client {
         messages: [Chat.Message],
         options: [String: Value]? = nil,
         template: String? = nil
-    )
-        async throws -> ChatResponse
-    {
-        var params: [String: Value] = [
-            "model": .string(model.rawValue),
-            "messages": try Value(messages),
-            "stream": false,
-        ]
-
-        if let options {
-            params["options"] = .object(options)
-        }
-
-        if let template {
-            params["template"] = .string(template)
-        }
-
+    ) async throws -> ChatResponse {
+        let params = try createChatParams(
+            model: model,
+            messages: messages,
+            options: options,
+            template: template,
+            stream: false
+        )
         return try await fetch(.post, "/api/chat", params: params)
     }
 
@@ -468,10 +469,27 @@ extension Client {
         options: [String: Value]? = nil,
         template: String? = nil
     ) throws -> AsyncThrowingStream<ChatResponse, Swift.Error> {
+        let params = try createChatParams(
+            model: model,
+            messages: messages,
+            options: options,
+            template: template,
+            stream: true
+        )
+        return fetchStream(.post, "/api/chat", params: params)
+    }
+
+    private func createChatParams(
+        model: Model.ID,
+        messages: [Chat.Message],
+        options: [String: Value]?,
+        template: String?,
+        stream: Bool
+    ) throws -> [String: Value] {
         var params: [String: Value] = [
             "model": .string(model.rawValue),
             "messages": try Value(messages),
-            "stream": true,
+            "stream": .bool(stream)
         ]
 
         if let options {
@@ -482,7 +500,7 @@ extension Client {
             params["template"] = .string(template)
         }
 
-        return fetchStream(.post, "/api/chat", params: params)
+        return params
     }
 }
 

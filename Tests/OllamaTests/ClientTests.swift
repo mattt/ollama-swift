@@ -5,6 +5,12 @@ import XCTest
 final class ClientTests: XCTestCase {
     let ollama = Ollama.Client.default
 
+    override func setUpWithError() throws {
+        if ProcessInfo.processInfo.environment["CI"] != nil {
+            throw XCTSkip("Skipping tests in CI environment")
+        }
+    }
+
     func testGenerateWithImage() async throws {
         // Create a transparent 1x1 pixel image
         let imageData = Data(

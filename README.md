@@ -16,7 +16,7 @@ A Swift client library for interacting with the
 Add the following to your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/mattt/ollama-swift.git", from: "1.1.0")
+.package(url: "https://github.com/mattt/ollama-swift.git", from: "1.2.0")
 ```
 
 ## Usage

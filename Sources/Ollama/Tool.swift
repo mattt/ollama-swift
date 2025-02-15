@@ -55,7 +55,10 @@ public struct Tool<Input: Codable, Output: Codable>: ToolProtocol, Sendable {
         schema: [String: Value],
         implementation: @Sendable @escaping (Input) async throws -> Output
     ) {
-        self.schema = schema
+        self.schema = [
+            "type": .string("function"),
+            "function": .object(schema),
+        ]
         self.implementation = implementation
     }
 

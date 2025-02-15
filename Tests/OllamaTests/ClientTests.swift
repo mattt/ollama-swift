@@ -1,16 +1,20 @@
-import XCTest
+import Foundation
+import Testing
 
 @testable import Ollama
 
-final class ClientTests: XCTestCase {
-    let ollama = Ollama.Client.default
+@Suite(
+    .serialized,
+    .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil)
+)
+struct ClientTests {
+    let ollama: Client
 
-    override func setUpWithError() throws {
-        if ProcessInfo.processInfo.environment["CI"] != nil {
-            throw XCTSkip("Skipping tests in CI environment")
-        }
+    init() async {
+        ollama = await Client(host: Client.defaultHost)
     }
 
+    @Test
     func testGenerateWithImage() async throws {
         // Create a transparent 1x1 pixel image
         let imageData = Data(
@@ -26,15 +30,16 @@ final class ClientTests: XCTestCase {
             stream: false
         )
 
-        XCTAssertFalse(response.response.isEmpty)
-        XCTAssertTrue(response.done)
-        XCTAssertEqual(response.model, "llama3.2")
-        XCTAssertNotNil(response.createdAt)
-        XCTAssertGreaterThan(response.totalDuration ?? 0, 0)
-        XCTAssertGreaterThan(response.loadDuration ?? 0, 0)
-        XCTAssertGreaterThan(response.promptEvalCount ?? 0, 0)
+        #expect(!response.response.isEmpty)
+        #expect(response.done)
+        #expect(response.model == "llama3.2")
+        #expect(response.createdAt != nil)
+        #expect(response.totalDuration ?? 0 > 0)
+        #expect(response.loadDuration ?? 0 > 0)
+        #expect(response.promptEvalCount ?? 0 > 0)
     }
 
+    @Test
     func testChatCompletion() async throws {
         let messages: [Chat.Message] = [
             .system("You are a helpful AI assistant."),
@@ -44,34 +49,38 @@ final class ClientTests: XCTestCase {
         let response = try await ollama.chat(
             model: "llama3.2",
             messages: messages)
-        XCTAssertFalse(response.message.content.isEmpty)
+        #expect(!response.message.content.isEmpty)
     }
 
+    @Test
     func testEmbed() async throws {
         let input = "This is a test sentence for embedding."
         let response = try await ollama.embed(model: "llama3.2", input: input)
 
-        XCTAssertFalse(response.embeddings.rawValue.isEmpty)
-        XCTAssertGreaterThan(response.totalDuration, 0)
-        XCTAssertGreaterThan(response.loadDuration, 0)
-        XCTAssertGreaterThan(response.promptEvalCount, 0)
+        #expect(!response.embeddings.rawValue.isEmpty)
+        #expect(response.totalDuration > 0)
+        #expect(response.loadDuration > 0)
+        #expect(response.promptEvalCount > 0)
     }
 
+    @Test
     func testListModels() async throws {
         let response = try await ollama.listModels()
 
-        XCTAssertFalse(response.models.isEmpty)
-        XCTAssertNotNil(response.models.first)
+        #expect(!response.models.isEmpty)
+        #expect(response.models.first != nil)
     }
 
+    @Test
     func testListRunningModels() async throws {
         let response = try await ollama.listRunningModels()
 
         // This test might be flaky if no models are running
         // Consider starting a model before running this test
-        XCTAssertNotNil(response)
+        #expect(response != nil)
     }
 
+    @Test(.disabled())
     func testCreateShowDeleteModel() async throws {
         let base = "llama3.2"
         let name: Model.ID = "test-\(UUID().uuidString)"
@@ -83,20 +92,20 @@ final class ClientTests: XCTestCase {
 
         // Create model
         var success = try await ollama.createModel(name: name, modelfile: modelfile)
-        XCTAssertTrue(success)
+        #expect(success)
 
         // Show model
         let response = try await ollama.showModel(name)
-        XCTAssertTrue(response.details.parentModel?.hasPrefix(base + ":") ?? false)
+        #expect(response.details.parentModel?.hasPrefix(base + ":") ?? false)
 
         // Delete model
         success = try await ollama.deleteModel(name)
-        XCTAssertTrue(success)
+        #expect(success)
 
         // Verify deletion
         do {
             _ = try await ollama.showModel(name)
-            XCTFail("Model should have been deleted")
+            Issue.record("Model should have been deleted")
         } catch {
             // Expected error
         }

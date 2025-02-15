@@ -310,7 +310,8 @@ extension Client {
         model: Model.ID,
         messages: [Chat.Message],
         options: [String: Value]? = nil,
-        template: String? = nil
+        template: String? = nil,
+        tools: [any ToolProtocol]? = nil
     )
         async throws -> ChatResponse
     {
@@ -326,6 +327,10 @@ extension Client {
 
         if let template {
             params["template"] = .string(template)
+        }
+
+        if let tools {
+            params["tools"] = .array(tools.map { .object($0.schema) })
         }
 
         return try await fetch(.post, "/api/chat", params: params)

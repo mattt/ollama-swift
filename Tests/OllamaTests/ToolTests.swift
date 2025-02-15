@@ -3,79 +3,69 @@ import Testing
 
 @testable import Ollama
 
-enum HexColorTool {
-    struct Input: Codable {
-        let red: Double
-        let green: Double
-        let blue: Double
-    }
-
-    typealias Output = String
-
-    static var schema: [String: Value] {
-        [
-            "name": "rgb_to_hex",
-            "description": """
-            Converts RGB components to a hexadecimal color string.
-
-            The input is a JSON object with three floating-point numbers
-            representing the red, green, and blue components of a color.
-            The output is a string representing the color in hexadecimal format.
-            """,
-            "parameters": [
-                "type": "object",
-                "properties": [
-                    "red": [
-                        "type": "number",
-                        "description": "The red component of the color",
-                        "minimum": 0.0,
-                        "maximum": 1.0,
-                    ],
-                    "green": [
-                        "type": "number",
-                        "description": "The green component of the color",
-                        "minimum": 0.0,
-                        "maximum": 1.0,
-                    ],
-                    "blue": [
-                        "type": "number",
-                        "description": "The blue component of the color",
-                        "minimum": 0.0,
-                        "maximum": 1.0,
-                    ],
-                ],
-                "required": ["red", "green", "blue"],
-            ],
-        ]
-    }
-
-    static func call(_ input: Input) async throws -> Output {
-        let r = Int(round(input.red * 255))
-        let g = Int(round(input.green * 255))
-        let b = Int(round(input.blue * 255))
-        return String(
-            format: "#%02X%02X%02X",
-            min(max(r, 0), 255),
-            min(max(g, 0), 255),
-            min(max(b, 0), 255)
-        )
-    }
+struct HexColorInput: Codable {
+    let red: Double
+    let green: Double
+    let blue: Double
 }
 
-extension HexColorTool: Tool {}
+let hexColorTool = tool(
+    name: "rgb_to_hex",
+    description: """
+        Converts RGB components to a hexadecimal color string.
+
+        The input is a JSON object with three floating-point numbers
+        representing the red, green, and blue components of a color.
+        The output is a string representing the color in hexadecimal format.
+        """,
+    parameters: [
+        "type": "object",
+        "properties": [
+            "red": [
+                "type": "number",
+                "description": "The red component of the color",
+                "minimum": 0.0,
+                "maximum": 1.0,
+            ],
+            "green": [
+                "type": "number",
+                "description": "The green component of the color",
+                "minimum": 0.0,
+                "maximum": 1.0,
+            ],
+            "blue": [
+                "type": "number",
+                "description": "The blue component of the color",
+                "minimum": 0.0,
+                "maximum": 1.0,
+            ],
+        ],
+        "required": ["red", "green", "blue"],
+    ]
+) { (input: HexColorInput) async throws -> String in
+    let r = Int(round(input.red * 255))
+    let g = Int(round(input.green * 255))
+    let b = Int(round(input.blue * 255))
+    return String(
+        format: "#%02X%02X%02X",
+        min(max(r, 0), 255),
+        min(max(g, 0), 255),
+        min(max(b, 0), 255)
+    )
+}
 
 @Suite
 struct ToolTests {
     @Test
     func usage() async throws {
-        let input = HexColorTool.Input(red: 1.0, green: 0.0, blue: 0.0)
-        let result = try await HexColorTool.call(input)
+        let input = HexColorInput(red: 1.0, green: 0.0, blue: 0.0)
+        let result = try await hexColorTool(input)
         #expect(result == "#FF0000")
     }
 
     @Test
     func verifyToolSchema() throws {
-        let schema = HexColorTool.schema
+        let schema = hexColorTool.schema
 
         // Verify basic schema structure
         #expect(schema["name"]?.stringValue == "rgb_to_hex")
@@ -109,13 +99,13 @@ struct ToolTests {
 
         #expect(
             parameters["required"]?.arrayValue == ["red", "green", "blue"],
-            "Expected 3 required parameters, got \(parameters["required"]?.arrayValue)"
+            "Expected 3 required parameters, got \(parameters["required"]?.arrayValue ?? [])"
         )
     }
 
     @Test
     func testInputSerialization() throws {
-        let input = HexColorTool.Input(red: 0.5, green: 0.7, blue: 0.9)
+        let input = HexColorInput(red: 0.5, green: 0.7, blue: 0.9)
 
         // Test JSON encoding
         let encoder = JSONEncoder()
@@ -123,7 +113,7 @@ struct ToolTests {
 
         // Test JSON decoding
         let decoder = JSONDecoder()
-        let decoded = try decoder.decode(HexColorTool.Input.self, from: encoded)
+        let decoded = try decoder.decode(HexColorInput.self, from: encoded)
 
         // Verify roundtrip
         #expect(decoded.red == input.red)
@@ -144,12 +134,12 @@ struct ToolTests {
         ]
 
         for testCase in testCases {
-            let input = HexColorTool.Input(
+            let input = HexColorInput(
                 red: testCase.red,
                 green: testCase.green,
                 blue: testCase.blue
             )
-            let result = try await HexColorTool.call(input)
+            let result = try await hexColorTool(input)
             #expect(result == testCase.expected, "Failed conversion for \(testCase)")
         }
     }

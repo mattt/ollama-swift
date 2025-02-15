@@ -182,7 +182,7 @@ struct ClientTests {
         }
 
         // First request - get RGB values
-        let initialMessages: [Chat.Message] = [
+        var messages: [Chat.Message] = [
             .system(
                 """
                 You are a helpful AI assistant that can help with color conversions.
@@ -191,65 +191,71 @@ struct ClientTests {
             .user("What is the RGB for papayawhip?"),
         ]
 
-        let initialResponse = try await ollama.chat(
-            model: "llama3.2",
-            messages: initialMessages,
-            tools: [colorNameTool]
-        )
+        var response: Client.ChatResponse
 
-        // Verify color tool call
-        #expect(initialResponse.message.toolCalls?.count == 1)
-        guard let colorCall = initialResponse.message.toolCalls?.first else {
-            Issue.record("Missing color tool call")
-            return
-        }
-        #expect(colorCall.function.name == "lookup_color")
+        // First turn
+        do {
+            response = try await ollama.chat(
+                model: "llama3.2",
+                messages: messages,
+                tools: [colorNameTool]
+            )
 
-        guard let colorName = colorCall.function.arguments["colorName"]?.stringValue else {
-            Issue.record("Missing color name")
-            return
-        }
-        #expect(colorName == "papayawhip")
+            // Verify color tool call
+            #expect(response.message.toolCalls?.count == 1)
+            guard let colorCall = response.message.toolCalls?.first else {
+                Issue.record("Missing color tool call")
+                return
+            }
+            #expect(colorCall.function.name == "lookup_color")
 
-        let color = try await colorNameTool(colorName)
-        guard let colorJSON = String(data: try JSONEncoder().encode(color), encoding: .utf8)
-        else {
-            Issue.record("Failed to encode color")
-            return
-        }
+            guard let colorName = colorCall.function.arguments["colorName"]?.stringValue else {
+                Issue.record("Missing color name")
+                return
+            }
+            #expect(colorName == "papayawhip")
 
-        // Second request - convert to hex
-        var nextMessages = initialMessages
-        nextMessages.append(initialResponse.message)
-        nextMessages.append(.tool(colorJSON))
-        nextMessages.append(.user("Now convert those RGB values to hex."))
-
-        let followupResponse = try await ollama.chat(
-            model: "llama3.2",
-            messages: nextMessages,
-            tools: [hexColorTool]
-        )
-
-        // Verify hex tool call
-        #expect(followupResponse.message.toolCalls?.count == 1)
-        guard let hexCall = followupResponse.message.toolCalls?.first else {
-            Issue.record("Missing hex tool call")
-            return
-        }
-        #expect(hexCall.function.name == "rgb_to_hex")
-
-        // Verify RGB values
-        guard let red = Double(hexCall.function.arguments["red"]!, strict: false),
-            let green = Double(hexCall.function.arguments["green"]!),
-            let blue = Double(hexCall.function.arguments["blue"]!)
-        else {
-            Issue.record("Failed to parse RGB values")
-            return
+            let color = try await colorNameTool(colorName)
+            guard let colorJSON = String(data: try JSONEncoder().encode(color), encoding: .utf8)
+            else {
+                Issue.record("Failed to encode color")
+                return
+            }
+            messages.append(.tool(colorJSON))
         }
 
-        // Allow for some floating point variance
-        #expect(abs(red - 1.0) < 0.1)
-        #expect(abs(green - 0.937) < 0.1)
-        #expect(abs(blue - 0.835) < 0.1)
+        // Second turn
+        do {
+            messages.append(.user("Now convert those RGB values to hex."))
+
+            // Second request - convert to hex
+            response = try await ollama.chat(
+                model: "llama3.2",
+                messages: messages,
+                tools: [hexColorTool]
+            )
+
+            // Verify hex tool call
+            #expect(response.message.toolCalls?.count == 1)
+            guard let hexCall = response.message.toolCalls?.first else {
+                Issue.record("Missing hex tool call")
+                return
+            }
+            #expect(hexCall.function.name == "rgb_to_hex")
+
+            // Verify RGB values
+            guard let red = Double(hexCall.function.arguments["red"]!, strict: false),
+                let green = Double(hexCall.function.arguments["green"]!),
+                let blue = Double(hexCall.function.arguments["blue"]!)
+            else {
+                Issue.record("Failed to parse RGB values")
+                return
+            }
+
+            // Allow for some floating point variance
+            #expect(abs(red - 1.0) < 0.1)
+            #expect(abs(green - 0.937) < 0.1)
+            #expect(abs(blue - 0.835) < 0.1)
+        }
     }
 }

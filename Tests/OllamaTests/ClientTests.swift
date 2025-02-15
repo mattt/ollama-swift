@@ -240,8 +240,8 @@ struct ClientTests {
 
         // Verify RGB values
         guard let red = Double(hexCall.function.arguments["red"]!, strict: false),
-            let green = Double(hexCall.function.arguments["green"]!, strict: false),
-            let blue = Double(hexCall.function.arguments["blue"]!, strict: false)
+            let green = Double(hexCall.function.arguments["green"]!),
+            let blue = Double(hexCall.function.arguments["blue"]!)
         else {
             Issue.record("Failed to parse RGB values")
             return

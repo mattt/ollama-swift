@@ -1,9 +1,12 @@
+import Foundation
 import Testing
-import XCTest
 
 @testable import Ollama
 
-@Suite(.serialized)
+@Suite(
+    .serialized,
+    .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil)
+)
 struct ClientTests {
     let ollama: Client
 

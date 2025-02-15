@@ -6,7 +6,11 @@ import PackageDescription
 let package = Package(
     name: "Ollama",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v13),
+        .macCatalyst(.v13),
+        .iOS(.v16),
+        .watchOS(.v9),
+        .tvOS(.v16)
     ],
     products: [
         .library(

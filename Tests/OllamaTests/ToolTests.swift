@@ -9,7 +9,7 @@ struct HexColorInput: Codable {
     let blue: Double
 }
 
-let hexColorTool = tool(
+let hexColorTool = Tool<HexColorInput, String>(
     name: "rgb_to_hex",
     description: """
         Converts RGB components to a hexadecimal color string.
@@ -42,7 +42,7 @@ let hexColorTool = tool(
         ],
         "required": ["red", "green", "blue"],
     ]
-) { (input: HexColorInput) async throws -> String in
+) { (input) async throws -> String in
     let r = Int(round(input.red * 255))
     let g = Int(round(input.green * 255))
     let b = Int(round(input.blue * 255))

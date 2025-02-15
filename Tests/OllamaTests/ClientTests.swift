@@ -110,4 +110,152 @@ struct ClientTests {
             // Expected error
         }
     }
+
+    @Test
+    func testChatWithTool() async throws {
+        let messages: [Chat.Message] = [
+            .system(
+                """
+                You are a helpful AI assistant that can convert colors.
+                When asked about colors, use the rgb_to_hex tool to convert them.
+                """),
+            .user("What's the hex code for yellow?"),
+        ]
+
+        let response = try await ollama.chat(
+            model: "llama3.2",
+            messages: messages,
+            tools: [hexColorTool]
+        )
+
+        #expect(response.message.toolCalls?.count == 1)
+        guard let toolCall = response.message.toolCalls?.first else {
+            Issue.record("No tool call found in response")
+            return
+        }
+
+        #expect(toolCall.function.name == "rgb_to_hex")
+        let args = toolCall.function.arguments
+        guard let red = Double(args["red"]!, strict: false),
+            let green = Double(args["green"]!, strict: false),
+            let blue = Double(args["blue"]!, strict: false)
+        else {
+            Issue.record("Failed to convert arguments to Double")
+            return
+        }
+        #expect(red == 1.0)
+        #expect(green == 1.0)
+        #expect(blue == 0.0)
+    }
+
+    @Test
+    func testChatWithToolsMultipleTurns() async throws {
+        enum ColorError: Error {
+            case unknownColor(String)
+        }
+
+        // Create a color name mapping tool
+        let colorNameTool = Tool<String, HexColorInput>(
+            name: "lookup_color",
+            description: "Gets the RGB values (0-1) for common HTML color names",
+            parameters: [
+                "type": "object",
+                "properties": [
+                    "colorName": [
+                        "type": "string",
+                        "description": "Name of the HTML color",
+                    ]
+                ],
+                "required": ["colorName"],
+            ]
+        ) { colorName in
+            let colors: [String: HexColorInput] = [
+                "papayawhip": .init(red: 1.0, green: 0.937, blue: 0.835),
+                "cornflowerblue": .init(red: 0.392, green: 0.584, blue: 0.929),
+                "mediumseagreen": .init(red: 0.235, green: 0.702, blue: 0.443),
+            ]
+
+            guard let color = colors[colorName.lowercased()] else {
+                throw ColorError.unknownColor(colorName)
+            }
+            return color
+        }
+
+        // First request - get RGB values
+        var messages: [Chat.Message] = [
+            .system(
+                """
+                You are a helpful AI assistant that can help with color conversions.
+                First, use the lookup_color tool to get RGB values for color names.
+                """),
+            .user("What is the RGB for papayawhip?"),
+        ]
+
+        var response: Client.ChatResponse
+
+        // First turn
+        do {
+            response = try await ollama.chat(
+                model: "llama3.2",
+                messages: messages,
+                tools: [colorNameTool]
+            )
+
+            // Verify color tool call
+            #expect(response.message.toolCalls?.count == 1)
+            guard let colorCall = response.message.toolCalls?.first else {
+                Issue.record("Missing color tool call")
+                return
+            }
+            #expect(colorCall.function.name == "lookup_color")
+
+            guard let colorName = colorCall.function.arguments["colorName"]?.stringValue else {
+                Issue.record("Missing color name")
+                return
+            }
+            #expect(colorName == "papayawhip")
+
+            let color = try await colorNameTool(colorName)
+            guard let colorJSON = String(data: try JSONEncoder().encode(color), encoding: .utf8)
+            else {
+                Issue.record("Failed to encode color")
+                return
+            }
+            messages.append(.tool(colorJSON))
+        }
+
+        // Second turn
+        do {
+            messages.append(.user("Now convert those RGB values to hex."))
+
+            // Second request - convert to hex
+            response = try await ollama.chat(
+                model: "llama3.2",
+                messages: messages,
+                tools: [hexColorTool]
+            )
+
+            // Verify hex tool call
+            #expect(response.message.toolCalls?.count == 1)
+            guard let hexCall = response.message.toolCalls?.first else {
+                Issue.record("Missing hex tool call")
+                return
+            }
+            #expect(hexCall.function.name == "rgb_to_hex")
+
+            // Verify RGB values
+            guard let red = Double(hexCall.function.arguments["red"]!, strict: false),
+                let green = Double(hexCall.function.arguments["green"]!),
+                let blue = Double(hexCall.function.arguments["blue"]!)
+            else {
+                Issue.record("Failed to parse RGB values")
+                return
+            }
+
+            // Allow for some floating point variance
+            #expect(abs(red - 1.0) < 0.1)
+            #expect(abs(green - 0.937) < 0.1)
+            #expect(abs(blue - 0.835) < 0.1)
+        }
+    }
 }

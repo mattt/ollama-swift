@@ -82,6 +82,56 @@ do {
 }
 ```
 
+### Using Structured Outputs
+
+You can request structured outputs from models by specifying a format. 
+Pass `"json"` to get back a JSON string,
+or specify a full [JSON Schema](https://json-schema.org):
+
+```swift
+// Simple JSON format
+let response = try await client.chat(
+    model: "llama3.2",
+    messages: [.user("List 3 colors.")],
+    format: "json"
+)
+
+// Using JSON schema for more control
+let schema: Value = [
+    "type": "object",
+    "properties": [
+        "colors": [
+            "type": "array",
+            "items": [
+                "type": "object",
+                "properties": [
+                    "name": ["type": "string"],
+                    "hex": ["type": "string"]
+                ],
+                "required": ["name", "hex"]
+            ]
+        ]
+    ],
+    "required": ["colors"]
+]
+
+let response = try await client.chat(
+    model: "llama3.2",
+    messages: [.user("List 3 colors with their hex codes.")],
+    format: schema
+)
+
+// The response will be a JSON object matching the schema:
+// {
+//   "colors": [
+//     {"name": "papayawhip", "hex": "#FFEFD5"},
+//     {"name": "indigo", "hex": "#4B0082"},
+//     {"name": "navy", "hex": "#000080"}
+//   ]
+// }
+```
+
+The format parameter works with both `chat` and `generate` methods.
 
 ### Using Tools
 
@@ -89,9 +139,8 @@ Ollama supports tool calling with models,
 allowing models to perform complex tasks or interact with external services.
 
 > [!NOTE]
-> Tool support requires a [compatible model](https://ollama.com/search?c=tools).
-> Make sure you have the latest version of your model by running 
-> `ollama pull <model>`.
+> Tool support requires a [compatible model](https://ollama.com/search?c=tools),
+> such as llama3.2.
 
 #### Creating a Tool
 

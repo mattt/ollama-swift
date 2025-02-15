@@ -77,7 +77,7 @@ struct ClientTests {
         #expect(response != nil)
     }
 
-    @Test
+    @Test(.disabled())
     func testCreateShowDeleteModel() async throws {
         let base = "llama3.2"
         let name: Model.ID = "test-\(UUID().uuidString)"

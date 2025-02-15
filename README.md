@@ -16,7 +16,7 @@ A Swift client library for interacting with the
 Add the following to your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/mattt/ollama-swift.git", from: "1.0.0")
+.package(url: "https://github.com/mattt/ollama-swift.git", from: "1.2.0")
 ```
 
 ## Usage
@@ -80,6 +80,182 @@ do {
 } catch {
     print("Error: \(error)")
 }
+```
+
+### Using Structured Outputs
+
+You can request structured outputs from models by specifying a format. 
+Pass `"json"` to get back a JSON string,
+or specify a full [JSON Schema](https://json-schema.org):
+
+```swift
+// Simple JSON format
+let response = try await client.chat(
+    model: "llama3.2",
+    messages: [.user("List 3 colors.")],
+    format: "json"
+)
+
+// Using JSON schema for more control
+let schema: Value = [
+    "type": "object",
+    "properties": [
+        "colors": [
+            "type": "array",
+            "items": [
+                "type": "object",
+                "properties": [
+                    "name": ["type": "string"],
+                    "hex": ["type": "string"]
+                ],
+                "required": ["name", "hex"]
+            ]
+        ]
+    ],
+    "required": ["colors"]
+]
+
+let response = try await client.chat(
+    model: "llama3.2",
+    messages: [.user("List 3 colors with their hex codes.")],
+    format: schema
+)
+
+// The response will be a JSON object matching the schema:
+// {
+//   "colors": [
+//     {"name": "papayawhip", "hex": "#FFEFD5"},
+//     {"name": "indigo", "hex": "#4B0082"},
+//     {"name": "navy", "hex": "#000080"}
+//   ]
+// }
+```
+
+The format parameter works with both `chat` and `generate` methods.
+
+### Using Tools
+
+Ollama supports tool calling with models,
+allowing models to perform complex tasks or interact with external services.
+
+> [!NOTE]
+> Tool support requires a [compatible model](https://ollama.com/search?c=tools),
+> such as llama3.2.
+
+#### Creating a Tool
+
+Define a tool by specifying its name, description, parameters, and implementation:
+
+```swift
+struct WeatherInput: Codable {
+    let city: String
+}
+
+struct WeatherOutput: Codable {
+    let temperature: Double
+    let conditions: String
+}
+
+let weatherTool = Tool<WeatherInput, WeatherOutput>(
+    name: "get_current_weather",
+    description: """
+    Get the current weather for a city, 
+    with conditions ("sunny", "cloudy", etc.)
+    and temperature in °C.
+    """,
+    parameters: [
+        "type": "object",
+        "properties": [
+            "city": [
+                "type": "string",
+                "description": "The city to get weather for"
+            ]
+        ],
+        "required": ["city"]
+    ]
+) { input async throws -> WeatherOutput in
+    // Implement weather lookup logic here
+    return WeatherOutput(temperature: 18.5, conditions: "cloudy")
+}
+```
+
+#### Using Tools in Chat
+
+Provide tools to the model during chat:
+
+```swift
+let messages: [Chat.Message] = [
+    .system("You are a helpful assistant that can check the weather."),
+    .user("What's the weather like in Portland?")
+]
+
+let response = try await client.chat(
+    model: "llama3.1",
+    messages: messages,
+    tools: [weatherTool]
+)
+
+// Handle tool calls in the response
+if let toolCalls = response.message.toolCalls {
+    for toolCall in toolCalls {
+        print("Tool called: \(toolCall.function.name)")
+        print("Arguments: \(toolCall.function.arguments)")
+    }
+}
+```
+
+#### Multi-turn Tool Conversations
+
+Tools can be used in multi-turn conversations, where the model can use tool results to provide more detailed responses:
+
+```swift
+var messages: [Chat.Message] = [
+    .system("You are a helpful assistant that can convert colors."),
+    .user("What's the hex code for yellow?")
+]
+
+// First turn - model calls the tool
+let response1 = try await client.chat(
+    model: "llama3.1",
+    messages: messages,
+    tools: [rgbToHexTool]
+)
+
+enum ToolError {
+    case invalidParameters
+}
+
+// Add tool response to conversation
+if let toolCall = response1.message.toolCalls?.first {
+    // Parse the tool arguments
+    guard let args = toolCall.function.arguments,
+          let red = Double(redStr, strict: false),
+          let green = Double(greenStr, strict: false),
+          let blue = Double(blueStr, strict: false) 
+    else {
+        throw ToolError.invalidParameters
+    }
+    
+    let input = HexColorInput(
+        red: red,
+        green: green,
+        blue: blue
+    )
+    
+    // Execute the tool with the input
+    let hexColor = try await rgbToHexTool(input)
+    
+    // Add the tool result to the conversation
+    messages.append(.tool(hexColor))
+}
+
+// Continue conversation with tool result
+messages.append(.user("What other colors are similar?"))
+let response2 = try await client.chat(
+    model: "llama3.1",
+    messages: messages,
+    tools: [rgbToHexTool]
+)
 ```
 
 ### Generating embeddings

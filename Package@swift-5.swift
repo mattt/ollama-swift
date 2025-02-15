@@ -1,7 +1,6 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 5.7
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
-import CompilerPluginSupport
 import PackageDescription
 
 let package = Package(
@@ -11,8 +10,7 @@ let package = Package(
         .macCatalyst(.v13),
         .iOS(.v16),
         .watchOS(.v9),
-        .tvOS(.v16),
-        .visionOS(.v1),
+        .tvOS(.v16)
     ],
     products: [
         .library(
@@ -21,10 +19,6 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "Ollama",
-            dependencies: []),
-        .testTarget(
-            name: "OllamaTests",
-            dependencies: ["Ollama"]),
+            name: "Ollama")
     ]
 )

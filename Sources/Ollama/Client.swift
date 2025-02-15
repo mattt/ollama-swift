@@ -10,12 +10,13 @@ import Foundation
 /// allowing you to generate text, chat, create embeddings, and manage models.
 ///
 /// - SeeAlso: [Ollama API Documentation](https://github.com/ollama/ollama/blob/main/docs/api.md)
-open class Client {
+@MainActor
+public final class Client: Sendable {
     /// The default host URL for the Ollama API.
     public static let defaultHost = URL(string: "http://localhost:11434")!
 
     /// A default client instance using the default host.
-    public static let `default` = Client(host: Client.defaultHost)
+    public static let `default` = Client(host: defaultHost)
 
     /// The host URL for requests made by the client.
     public let host: URL
@@ -24,7 +25,7 @@ open class Client {
     public let userAgent: String?
 
     /// The underlying client session.
-    internal(set) public var session: URLSession
+    private let session: URLSession
 
     /// Creates a client with the specified session, host, and user agent.
     ///
@@ -251,7 +252,7 @@ open class Client {
 // MARK: - Generate
 
 extension Client {
-    public struct GenerateResponse: Hashable, Decodable {
+    public struct GenerateResponse: Hashable, Decodable, Sendable {
         public let model: Model.ID
         public let createdAt: Date
         public let response: String
@@ -285,7 +286,7 @@ extension Client {
     ///   - model: The name of the model to use for generation.
     ///   - prompt: The prompt to generate a response for.
     ///   - images: Optional list of base64-encoded images (for multimodal models).
-    ///   - format: The format to return a response in. Currently, the only accepted value is "json".
+    ///   - format: Optional format specification. Can be either a string ("json") or a JSON schema to constrain the model's output.
     ///   - options: Additional model parameters as specified in the Modelfile documentation.
     ///   - system: System message to override what is defined in the Modelfile.
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
@@ -297,7 +298,7 @@ extension Client {
         model: Model.ID,
         prompt: String,
         images: [Data]? = nil,
-        format: String? = nil,
+        format: Value? = nil,
         options: [String: Value]? = nil,
         system: String? = nil,
         template: String? = nil,
@@ -337,7 +338,7 @@ extension Client {
         model: Model.ID,
         prompt: String,
         images: [Data]? = nil,
-        format: String? = nil,
+        format: Value? = nil,
         options: [String: Value]? = nil,
         system: String? = nil,
         template: String? = nil,
@@ -363,7 +364,7 @@ extension Client {
         model: Model.ID,
         prompt: String,
         images: [Data]?,
-        format: String?,
+        format: Value?,
         options: [String: Value]?,
         system: String?,
         template: String?,
@@ -382,7 +383,7 @@ extension Client {
             params["images"] = .array(images.map { .string($0.base64EncodedString()) })
         }
         if let format = format {
-            params["format"] = .string(format)
+            params["format"] = format
         }
         if let options = options {
             params["options"] = .object(options)
@@ -404,7 +405,7 @@ extension Client {
 // MARK: - Chat
 
 extension Client {
-    public struct ChatResponse: Hashable, Decodable {
+    public struct ChatResponse: Hashable, Decodable, Sendable {
         public let model: Model.ID
         public let createdAt: Date
         public let message: Chat.Message
@@ -438,19 +439,25 @@ extension Client {
     ///   - messages: The messages of the chat, used to keep a chat memory.
     ///   - options: Additional model parameters as specified in the Modelfile documentation.
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
+    ///   - format: Optional format specification. Can be either a string ("json") or a JSON schema to constrain the model's output.
+    ///   - tools: Optional array of tools that can be called by the model.
     /// - Returns: A `ChatResponse` containing the generated message and additional information.
     /// - Throws: An error if the request fails or the response cannot be decoded.
     public func chat(
         model: Model.ID,
         messages: [Chat.Message],
         options: [String: Value]? = nil,
-        template: String? = nil
+        template: String? = nil,
+        format: Value? = nil,
+        tools: [any ToolProtocol]? = nil
     ) async throws -> ChatResponse {
         let params = try createChatParams(
             model: model,
             messages: messages,
             options: options,
             template: template,
+            format: format,
+            tools: tools,
             stream: false
         )
         return try await fetch(.post, "/api/chat", params: params)
@@ -469,13 +476,17 @@ extension Client {
         model: Model.ID,
         messages: [Chat.Message],
         options: [String: Value]? = nil,
-        template: String? = nil
+        template: String? = nil,
+        format: Value? = nil,
+        tools: [any ToolProtocol]? = nil
     ) throws -> AsyncThrowingStream<ChatResponse, Swift.Error> {
         let params = try createChatParams(
             model: model,
             messages: messages,
             options: options,
             template: template,
+            format: format,
+            tools: tools,
             stream: true
         )
         return fetchStream(.post, "/api/chat", params: params)
@@ -486,6 +497,8 @@ extension Client {
         messages: [Chat.Message],
         options: [String: Value]?,
         template: String?,
+        format: Value?,
+        tools: [any ToolProtocol]?,
         stream: Bool
     ) throws -> [String: Value] {
         var params: [String: Value] = [
@@ -502,6 +515,14 @@ extension Client {
             params["template"] = .string(template)
         }
 
+        if let format {
+            params["format"] = format
+        }
+
+        if let tools {
+            params["tools"] = .array(tools.map { .object($0.schema) })
+        }
+
         return params
     }
 }
@@ -509,7 +530,7 @@ extension Client {
 // MARK: - Embeddings
 
 extension Client {
-    public struct EmbedResponse: Decodable {
+    public struct EmbedResponse: Decodable, Sendable {
         public let model: Model.ID
         public let embeddings: Embeddings
         public let totalDuration: TimeInterval
@@ -559,8 +580,8 @@ extension Client {
 // MARK: - List Models
 
 extension Client {
-    public struct ListModelsResponse: Decodable {
-        public struct Model: Decodable {
+    public struct ListModelsResponse: Decodable, Sendable {
+        public struct Model: Decodable, Sendable {
             public let name: String
             public let modifiedAt: String
             public let size: Int64
@@ -591,8 +612,8 @@ extension Client {
 // MARK: - List Running Models
 
 extension Client {
-    public struct ListRunningModelsResponse: Decodable {
-        public struct Model: Decodable {
+    public struct ListRunningModelsResponse: Decodable, Sendable {
+        public struct Model: Decodable, Sendable {
             public let name: String
             public let model: String
             public let size: Int64
@@ -743,7 +764,7 @@ extension Client {
 
 extension Client {
     /// A response containing information about a model.
-    public struct ShowModelResponse: Decodable {
+    public struct ShowModelResponse: Decodable, Sendable {
         /// The contents of the Modelfile for the model.
         let modelfile: String
 

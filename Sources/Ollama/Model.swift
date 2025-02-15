@@ -6,7 +6,7 @@ public enum Model {
     /// An identifier in the form of "[namespace/]model[:tag]".
     /// This structure is used to uniquely identify models in the Ollama ecosystem.
     public struct ID: Hashable, Equatable, Comparable, RawRepresentable, CustomStringConvertible,
-        ExpressibleByStringLiteral, ExpressibleByStringInterpolation, Codable
+        ExpressibleByStringLiteral, ExpressibleByStringInterpolation, Codable, Sendable
     {
         /// The optional namespace of the model.
         /// Namespaces are used to organize models, often representing the creator or organization.
@@ -125,7 +125,7 @@ public enum Model {
     // MARK: -
 
     /// Represents additional information about a model.
-    public struct Details: Hashable, Decodable {
+    public struct Details: Hashable, Decodable, Sendable {
         /// The format of the model file (e.g., "gguf").
         public let format: String
 

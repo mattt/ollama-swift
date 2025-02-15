@@ -3,7 +3,7 @@ import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
 
 /// A codable value.
-public enum Value: Hashable {
+public enum Value: Hashable, Sendable {
     case null
     case bool(Bool)
     case int(Int)
@@ -47,8 +47,14 @@ public enum Value: Hashable {
     /// Returns the `Double` value if the value is a `double`,
     /// otherwise returns `nil`.
     public var doubleValue: Double? {
-        guard case let .double(value) = self else { return nil }
-        return value
+        switch self {
+        case .double(let value):
+            return value
+        case .int(let value):
+            return Double(value)
+        default:
+            return nil
+        }
     }
 
     /// Returns the `String` value if the value is a `string`,

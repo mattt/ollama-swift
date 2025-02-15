@@ -1,30 +1,34 @@
 import Foundation
 import RegexBuilder
 
-/// Regex pattern for data URLs
-private let dataURLRegex = Regex {
-    "data:"
-    Capture {
-        ZeroOrMore(.reluctant) {
-            CharacterClass.anyOf(",;").inverted
-        }
-    }
-    Optionally {
-        ";charset="
-        Capture {
-            OneOrMore(.reluctant) {
-                CharacterClass.anyOf(",;").inverted
+extension Data {
+    /// Regex pattern for data URLs
+    @inline(__always) private static var dataURLRegex:
+        Regex<(Substring, Substring, Substring?, Substring)>
+    {
+        Regex {
+            "data:"
+            Capture {
+                ZeroOrMore(.reluctant) {
+                    CharacterClass.anyOf(",;").inverted
+                }
+            }
+            Optionally {
+                ";charset="
+                Capture {
+                    OneOrMore(.reluctant) {
+                        CharacterClass.anyOf(",;").inverted
+                    }
+                }
+            }
+            Optionally { ";base64" }
+            ","
+            Capture {
+                ZeroOrMore { .any }
             }
         }
     }
-    Optionally { ";base64" }
-    ","
-    Capture {
-        ZeroOrMore { .any }
-    }
-}
 
-extension Data {
     /// Checks if a given string is a valid data URL.
     ///
     /// - Parameter string: The string to check.

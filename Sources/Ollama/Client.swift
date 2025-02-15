@@ -214,7 +214,7 @@ extension Client {
     ///   - model: The name of the model to use for generation.
     ///   - prompt: The prompt to generate a response for.
     ///   - images: Optional list of base64-encoded images (for multimodal models).
-    ///   - format: The format to return a response in. Currently, the only accepted value is "json".
+    ///   - format: Optional format specification. Can be either a string ("json") or a JSON schema to constrain the model's output.
     ///   - options: Additional model parameters as specified in the Modelfile documentation.
     ///   - system: System message to override what is defined in the Modelfile.
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
@@ -227,7 +227,7 @@ extension Client {
         model: Model.ID,
         prompt: String,
         images: [Data]? = nil,
-        format: String? = nil,
+        format: Value? = nil,
         options: [String: Value]? = nil,
         system: String? = nil,
         template: String? = nil,
@@ -248,7 +248,7 @@ extension Client {
             params["images"] = .array(images.map { .string($0.base64EncodedString()) })
         }
         if let format = format {
-            params["format"] = .string(format)
+            params["format"] = format
         }
         if let options = options {
             params["options"] = .object(options)
@@ -304,6 +304,8 @@ extension Client {
     ///   - messages: The messages of the chat, used to keep a chat memory.
     ///   - options: Additional model parameters as specified in the Modelfile documentation.
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
+    ///   - format: Optional format specification. Can be either a string ("json") or a JSON schema to constrain the model's output.
+    ///   - tools: Optional array of tools that can be called by the model.
     /// - Returns: A `ChatResponse` containing the generated message and additional information.
     /// - Throws: An error if the request fails or the response cannot be decoded.
     public func chat(
@@ -311,6 +313,7 @@ extension Client {
         messages: [Chat.Message],
         options: [String: Value]? = nil,
         template: String? = nil,
+        format: Value? = nil,
         tools: [any ToolProtocol]? = nil
     )
         async throws -> ChatResponse
@@ -327,6 +330,10 @@ extension Client {
 
         if let template {
             params["template"] = .string(template)
+        }
+
+        if let format {
+            params["format"] = format
         }
 
         if let tools {

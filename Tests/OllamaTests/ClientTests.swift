@@ -112,6 +112,120 @@ struct ClientTests {
     }
 
     @Test
+    func testGenerateWithFormat() async throws {
+        // Test string format
+        do {
+            let response = try await ollama.generate(
+                model: "llama3.2",
+                prompt: "List 3 colors and their hex codes.",
+                format: "json",
+                stream: false
+            )
+
+            #expect(!response.response.isEmpty)
+            #expect(response.done)
+
+            // Verify response is valid JSON
+            let data = response.response.data(using: .utf8)!
+            let _ = try JSONSerialization.jsonObject(with: data)
+        }
+
+        // Test JSON schema format
+        do {
+            let schema: Value = [
+                "type": "object",
+                "properties": [
+                    "colors": [
+                        "type": "array",
+                        "items": [
+                            "type": "object",
+                            "properties": [
+                                "name": ["type": "string"],
+                                "hex": ["type": "string"],
+                            ],
+                            "required": ["name", "hex"],
+                        ],
+                    ]
+                ],
+                "required": ["colors"],
+            ]
+
+            let response = try await ollama.generate(
+                model: "llama3.2",
+                prompt: "List 3 colors and their hex codes.",
+                format: schema,
+                stream: false
+            )
+
+            #expect(!response.response.isEmpty)
+            #expect(response.done)
+
+            // Verify response matches schema
+            let data = response.response.data(using: .utf8)!
+            let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+            #expect(json["colors"] is [[String: String]])
+        }
+    }
+
+    @Test
+    func testChatWithFormat() async throws {
+        let messages: [Chat.Message] = [
+            .system("You are a helpful AI assistant."),
+            .user("List 3 programming languages and when they were created."),
+        ]
+
+        // Test string format
+        do {
+            let response = try await ollama.chat(
+                model: "llama3.2",
+                messages: messages,
+                format: "json"
+            )
+
+            #expect(!response.message.content.isEmpty)
+
+            // Verify response is valid JSON
+            let data = response.message.content.data(using: .utf8)!
+            let _ = try JSONSerialization.jsonObject(with: data)
+        }
+
+        // Test JSON schema format
+        do {
+            let schema: Value = [
+                "type": "object",
+                "properties": [
+                    "languages": [
+                        "type": "array",
+                        "items": [
+                            "type": "object",
+                            "properties": [
+                                "name": ["type": "string"],
+                                "year": ["type": "integer"],
+                                "creator": ["type": "string"],
+                            ],
+                            "required": ["name", "year"],
+                        ],
+                    ]
+                ],
+                "required": ["languages"],
+            ]
+
+            let response = try await ollama.chat(
+                model: "llama3.2",
+                messages: messages,
+                format: schema
+            )
+
+            #expect(!response.message.content.isEmpty)
+
+            // Verify response matches schema
+            let data = response.message.content.data(using: .utf8)!
+            let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+            #expect(json["languages"] is [[String: Any]])
+        }
+    }
+
+    @Test
     func testChatWithTool() async throws {
         let messages: [Chat.Message] = [
             .system(

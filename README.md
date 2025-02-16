@@ -264,7 +264,7 @@ Generate embeddings for a given text:
 
 ```swift
 do {
-    let embeddings = try await client.createEmbeddings(
+    let embeddings = try await client.embed(
         model: "llama3.2",
         input: "Here is an article about llamas..."
     )

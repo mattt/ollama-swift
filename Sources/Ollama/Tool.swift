@@ -110,14 +110,43 @@ public struct Tool<Input: Codable, Output: Codable>: ToolProtocol {
         required: [String] = [],
         implementation: @Sendable @escaping (Input) async throws -> Output
     ) {
+        var propertiesObject: [String: Value] = parameters
+        var requiredParams = required
+
+        // Check if the user passed a full schema and extract properties and required fields
+        if case .string("object") = parameters["type"],
+            case .object(let props) = parameters["properties"]
+        {
+
+            #if DEBUG
+                print(
+                    "Warning: You're passing a full JSON schema to the 'parameters' argument. "
+                        + "This usage is deprecated. Pass only the properties object instead.")
+            #endif
+
+            propertiesObject = props
+
+            // If required field exists in the parameters and no required array was explicitly passed
+            if required.isEmpty,
+                case .array(let reqArray) = parameters["required"]
+            {
+                requiredParams = reqArray.compactMap { value in
+                    if case .string(let str) = value {
+                        return str
+                    }
+                    return nil
+                }
+            }
+        }
+
         self.init(
             schema: [
                 "name": .string(name),
                 "description": .string(description),
                 "parameters": .object([
                     "type": .string("object"),
-                    "properties": .object(parameters),
-                    "required": .array(required.map { .string($0) }),
+                    "properties": .object(propertiesObject),
+                    "required": .array(requiredParams.map { .string($0) }),
                 ]),
             ],
             implementation: implementation

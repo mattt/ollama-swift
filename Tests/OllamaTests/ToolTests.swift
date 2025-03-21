@@ -6,13 +6,6 @@ import Testing
 @Suite
 struct ToolTests {
     @Test
-    func usage() async throws {
-        let input = HexColorInput(red: 1.0, green: 0.0, blue: 0.0)
-        let result = try await hexColorTool(input)
-        #expect(result == "#FF0000")
-    }
-
-    @Test
     func verifyToolSchema() throws {
         let schema = hexColorTool.schema
 

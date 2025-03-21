@@ -1,4 +1,5 @@
 import Foundation
+import JSONSchema
 import Testing
 
 @testable import Ollama
@@ -14,49 +15,46 @@ struct ToolTests {
 
     @Test
     func verifyToolSchema() throws {
-        let schema = hexColorTool.schema
+        #expect(hexColorTool.name == "rgb_to_hex")
+        #expect(hexColorTool.description != nil)
 
         // Verify basic schema structure
-        #expect(schema["type"]?.stringValue == "function")
+        let schema = hexColorTool.inputSchema
 
-        guard let function = schema["function"]?.objectValue else {
-            #expect(Bool(false), "Missing or invalid function object in schema")
+        // Convert the schema to a dictionary to access its properties
+        let schemaDict =
+            try JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(schema)
+            ) as? [String: Any]
+
+        guard let schemaDict = schemaDict,
+            schemaDict["type"] as? String == "object",
+            let properties = schemaDict["properties"] as? [String: Any],
+            let required = schemaDict["required"] as? [String]
+        else {
+            Issue.record("Schema is not a valid object schema")
             return
         }
 
-        #expect(function["name"]?.stringValue == "rgb_to_hex")
-        #expect(function["description"]?.stringValue != nil)
+        #expect(properties.count == 3)
+        #expect(required == ["red", "green", "blue"])
 
-        guard let parameters = function["parameters"]?.objectValue else {
-            #expect(Bool(false), "Missing or invalid parameters in schema")
-            return
-        }
-
-        #expect(parameters["type"]?.stringValue == "object")
-
-        guard let properties = parameters["properties"]?.objectValue else {
-            #expect(Bool(false), "Missing or invalid properties in parameters")
-            return
-        }
-        #expect(properties.count == 3, "Expected 3 parameters, got \(properties.count)")
-
-        // Check required parameter definitions and constraints
-        for (key, value) in properties {
-            guard let paramObj = value.objectValue else {
-                #expect(Bool(false), "Missing parameter object for \(key)")
+        // Check the properties
+        for key in ["red", "green", "blue"] {
+            guard let prop = properties[key] as? [String: Any],
+                prop["type"] as? String == "number",
+                let min = prop["minimum"] as? Double,
+                let max = prop["maximum"] as? Double,
+                let desc = prop["description"] as? String
+            else {
+                Issue.record("Missing or invalid parameter object for \(key)")
                 continue
             }
 
-            #expect(paramObj["type"]?.stringValue == "number", "Invalid type for \(key)")
-            #expect(paramObj["description"]?.stringValue != nil, "Missing description for \(key)")
-            #expect(paramObj["minimum"]?.doubleValue == 0, "Invalid minimum for \(key)")
-            #expect(paramObj["maximum"]?.doubleValue == 1, "Invalid maximum for \(key)")
+            #expect(!desc.isEmpty, "Missing description for \(key)")
+            #expect(min == 0, "Invalid minimum for \(key)")
+            #expect(max == 1, "Invalid maximum for \(key)")
         }
-
-        #expect(
-            parameters["required"]?.arrayValue == ["red", "green", "blue"],
-            "Expected 3 required parameters, got \(parameters["required"]?.arrayValue ?? [])"
-        )
     }
 
     @Test

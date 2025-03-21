@@ -19,30 +19,26 @@ let hexColorTool = Tool<HexColorInput, String>(
         Parameters are named red, green, and blue. 
         Values are floating-point numbers between 0.0 and 1.0.
         """,
-    parameters: [
-        "type": "object",
-        "properties": [
-            "red": [
-                "type": "number",
-                "description": "The red component of the color",
-                "minimum": 0.0,
-                "maximum": 1.0,
-            ],
-            "green": [
-                "type": "number",
-                "description": "The green component of the color",
-                "minimum": 0.0,
-                "maximum": 1.0,
-            ],
-            "blue": [
-                "type": "number",
-                "description": "The blue component of the color",
-                "minimum": 0.0,
-                "maximum": 1.0,
-            ],
+    inputSchema: .object(
+        properties: [
+            "red": .number(
+                description: "The red component of the color",
+                minimum: 0.0,
+                maximum: 1.0
+            ),
+            "green": .number(
+                description: "The green component of the color",
+                minimum: 0.0,
+                maximum: 1.0
+            ),
+            "blue": .number(
+                description: "The blue component of the color",
+                minimum: 0.0,
+                maximum: 1.0
+            ),
         ],
-        "required": ["red", "green", "blue"],
-    ]
+        required: ["red", "green", "blue"]
+    )
 ) { (input) async throws -> String in
     let r = Int(round(input.red * 255))
     let g = Int(round(input.green * 255))

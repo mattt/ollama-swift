@@ -1,7 +1,15 @@
+import JSONSchema
+
 /// Protocol defining the requirements for a tool that can be used with Ollama
-public protocol ToolProtocol {
-    /// The JSON Schema describing the tool's interface
-    var schema: [String: Value] { get }
+public protocol ToolProtocol: Sendable {
+    /// The name of the tool
+    var name: String { get }
+
+    /// The description of the tool
+    var description: String { get }
+
+    /// The JSON Schema describing the tool's input parameters
+    var inputSchema: JSONSchema { get }
 }
 
 /// A type representing a tool that can be used with Ollama.
@@ -12,55 +20,11 @@ public protocol ToolProtocol {
 ///
 /// Tools can be provided to Ollama models that support tool calling
 /// (like Llama 3.1, Mistral Nemo, etc.) to extend their capabilities.
-public struct Tool<Input: Codable, Output: Codable>: ToolProtocol, Sendable {
-    /// A JSON Schema for the tool.
-    ///
-    /// Models use the schema to understand when and how to use the tool.
-    /// The schema includes the tool's name, description, and parameter specifications.
-    ///
-    /// - Example:
-    /// ```swift
-    /// var schema: [String: Value] {
-    ///     [
-    ///         "name": "get_current_weather",
-    ///         "description": "Get the current weather for a location",
-    ///         "parameters": [
-    ///             "type": "object",
-    ///             "properties": [
-    ///                 "location": [
-    ///                     "type": "string",
-    ///                     "description": "The location to get the weather for, e.g. San Francisco, CA"
-    ///                 ],
-    ///                 "format": [
-    ///                     "type": "string",
-    ///                     "description": "The format to return the weather in, e.g. 'celsius' or 'fahrenheit'",
-    ///                     "enum": ["celsius", "fahrenheit"]
-    ///                 ]
-    ///             ],
-    ///             "required": ["location", "format"]
-    ///         ]
-    ///     ]
-    /// }
-    /// ```
-    public let schema: [String: Value]
-
+public struct Tool<Input: Codable, Output: Codable>: ToolProtocol {
+    public let name: String
+    public let description: String
+    public let inputSchema: JSONSchema
     private let implementation: @Sendable (Input) async throws -> Output
-
-    /// Creates a new tool with the given schema and implementation.
-    ///
-    /// - Parameters:
-    ///   - schema: The JSON schema describing the tool's interface
-    ///   - implementation: The function that implements the tool's behavior
-    public init(
-        schema: [String: Value],
-        implementation: @Sendable @escaping (Input) async throws -> Output
-    ) {
-        self.schema = [
-            "type": .string("function"),
-            "function": .object(schema),
-        ]
-        self.implementation = implementation
-    }
 
     /// Creates a new tool with the given name, description, and implementation.
     ///
@@ -92,17 +56,13 @@ public struct Tool<Input: Codable, Output: Codable>: ToolProtocol, Sendable {
     public init(
         name: String,
         description: String,
-        parameters: [String: Value],
+        inputSchema: JSONSchema,
         implementation: @Sendable @escaping (Input) async throws -> Output
     ) {
-        self.init(
-            schema: [
-                "name": .string(name),
-                "description": .string(description),
-                "parameters": .object(parameters),
-            ],
-            implementation: implementation
-        )
+        self.name = name
+        self.description = description
+        self.inputSchema = inputSchema
+        self.implementation = implementation
     }
 
     /// Calls the tool with the given input.

@@ -19,10 +19,15 @@ let package = Package(
             name: "Ollama",
             targets: ["Ollama"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/loopwork-ai/JSONSchema", from: "1.0.0")
+    ],
     targets: [
         .target(
             name: "Ollama",
-            dependencies: []),
+            dependencies: [
+                .product(name: "JSONSchema", package: "JSONSchema")
+            ]),
         .testTarget(
             name: "OllamaTests",
             dependencies: ["Ollama"]),

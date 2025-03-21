@@ -10,15 +10,21 @@ let package = Package(
         .macCatalyst(.v13),
         .iOS(.v16),
         .watchOS(.v9),
-        .tvOS(.v16)
+        .tvOS(.v16),
     ],
     products: [
         .library(
             name: "Ollama",
             targets: ["Ollama"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/loopwork-ai/JSONSchema", from: "1.0.0")
+    ],
     targets: [
         .target(
-            name: "Ollama")
+            name: "Ollama",
+            dependencies: [
+                .product(name: "JSONSchema", package: "JSONSchema")
+            ])
     ]
 )

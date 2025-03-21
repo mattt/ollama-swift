@@ -1,5 +1,5 @@
 /// Protocol defining the requirements for a tool that can be used with Ollama
-public protocol ToolProtocol {
+public protocol ToolProtocol: Sendable {
     /// The JSON Schema describing the tool's interface
     var schema: [String: Value] { get }
 }
@@ -12,7 +12,7 @@ public protocol ToolProtocol {
 ///
 /// Tools can be provided to Ollama models that support tool calling
 /// (like Llama 3.1, Mistral Nemo, etc.) to extend their capabilities.
-public struct Tool<Input: Codable, Output: Codable>: ToolProtocol, Sendable {
+public struct Tool<Input: Codable, Output: Codable>: ToolProtocol {
     /// A JSON Schema for the tool.
     ///
     /// Models use the schema to understand when and how to use the tool.

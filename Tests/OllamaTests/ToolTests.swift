@@ -7,13 +7,16 @@ import Testing
 struct ToolTests {
     @Test
     func verifyToolSchema() throws {
-        let schema = hexColorTool.schema
+        guard case let .object(schema) = hexColorTool.schemaValue else {
+            Issue.record("Schema is not an object")
+            return
+        }
 
         // Verify basic schema structure
         #expect(schema["type"]?.stringValue == "function")
 
         guard let function = schema["function"]?.objectValue else {
-            #expect(Bool(false), "Missing or invalid function object in schema")
+            Issue.record("Missing or invalid function object in schema")
             return
         }
 
@@ -21,14 +24,14 @@ struct ToolTests {
         #expect(function["description"]?.stringValue != nil)
 
         guard let parameters = function["parameters"]?.objectValue else {
-            #expect(Bool(false), "Missing or invalid parameters in schema")
+            Issue.record("Missing or invalid parameters in schema")
             return
         }
 
         #expect(parameters["type"]?.stringValue == "object")
 
         guard let properties = parameters["properties"]?.objectValue else {
-            #expect(Bool(false), "Missing or invalid properties in parameters")
+            Issue.record("Missing or invalid properties in parameters")
             return
         }
         #expect(properties.count == 3, "Expected 3 parameters, got \(properties.count)")
@@ -36,7 +39,7 @@ struct ToolTests {
         // Check required parameter definitions and constraints
         for (key, value) in properties {
             guard let paramObj = value.objectValue else {
-                #expect(Bool(false), "Missing parameter object for \(key)")
+                Issue.record("Missing parameter object for \(key)")
                 continue
             }
 
@@ -91,5 +94,142 @@ struct ToolTests {
             let result = try await hexColorTool(input)
             #expect(result == testCase.expected, "Failed conversion for \(testCase)")
         }
+    }
+
+    @Test
+    func testBackwardsCompatibilityWithFullSchema() throws {
+        // Define a simple struct for testing
+        struct TestInput: Codable {
+            let query: String
+        }
+        
+        // Create a tool using the old style (full schema in parameters)
+        let oldStyleTool = Tool(
+            name: "test_tool",
+            description: "A test tool",
+            parameters: [
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("The search query"),
+                    ])
+                ]),
+                "required": .array([.string("query")]),
+            ]
+        ) { (input: TestInput) async throws -> String in
+            return "result"
+        }
+
+        // Create the same tool using the new style
+        let newStyleTool = Tool(
+            name: "test_tool",
+            description: "A test tool",
+            parameters: [
+                "query": .object([
+                    "type": .string("string"),
+                    "description": .string("The search query"),
+                ])
+            ],
+            required: ["query"]
+        ) { (input: TestInput) async throws -> String in
+            return "result"
+        }
+
+        // Verify both tools generate the same schema
+        guard case let .object(oldSchema) = oldStyleTool.schemaValue,
+            case let .object(newSchema) = newStyleTool.schemaValue,
+            let oldFunction = oldSchema["function"]?.objectValue,
+            let newFunction = newSchema["function"]?.objectValue,
+            let oldParameters = oldFunction["parameters"]?.objectValue,
+            let newParameters = newFunction["parameters"]?.objectValue,
+            let oldProperties = oldParameters["properties"]?.objectValue,
+            let newProperties = newParameters["properties"]?.objectValue,
+            let oldRequired = oldParameters["required"]?.arrayValue,
+            let newRequired = newParameters["required"]?.arrayValue
+        else {
+            Issue.record("Invalid schema structure")
+            return
+        }
+
+        // Compare the properties
+        #expect(oldProperties.count == newProperties.count)
+        #expect(
+            oldProperties["query"]?.objectValue?["type"]
+                == newProperties["query"]?.objectValue?["type"])
+        #expect(
+            oldProperties["query"]?.objectValue?["description"]
+                == newProperties["query"]?.objectValue?["description"])
+
+        // Compare the required fields
+        #expect(oldRequired.count == newRequired.count)
+        #expect(oldRequired[0] == newRequired[0])
+    }
+
+    @Test
+    func testBackwardsCompatibilityWithRequiredField() throws {
+        // Define a simple struct for testing
+        struct TestInput: Codable {
+            let query: String
+        }
+
+        // Create a tool with a full schema but no explicit required parameter
+        let toolWithImplicitRequired = Tool(
+            name: "test_tool",
+            description: "A test tool",
+            parameters: [
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("The search query"),
+                    ])
+                ]),
+                "required": .array([.string("query")]),
+            ]
+        ) { (input: TestInput) async throws -> String in
+            return "result"
+        }
+
+        // Create a tool with a full schema and an explicit required parameter (which should override)
+        let toolWithExplicitRequired = Tool(
+            name: "test_tool",
+            description: "A test tool",
+            parameters: [
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("The search query"),
+                    ])
+                ]),
+                "required": .array([.string("query")]),  // This should be ignored
+            ],
+            required: ["differentField"]  // This should take precedence
+        ) { (input: TestInput) async throws -> String in
+            return "result"
+        }
+
+        // Verify the required fields are correctly handled
+        guard case let .object(implicitSchema) = toolWithImplicitRequired.schemaValue,
+            case let .object(explicitSchema) = toolWithExplicitRequired.schemaValue,
+            let implicitFunction = implicitSchema["function"]?.objectValue,
+            let explicitFunction = explicitSchema["function"]?.objectValue,
+            let implicitParameters = implicitFunction["parameters"]?.objectValue,
+            let explicitParameters = explicitFunction["parameters"]?.objectValue,
+            let implicitRequired = implicitParameters["required"]?.arrayValue,
+            let explicitRequired = explicitParameters["required"]?.arrayValue
+        else {
+            Issue.record("Invalid schema structure")
+            return
+        }
+
+        // For implicit required from schema, we should see "query"
+        #expect(implicitRequired.count == 1)
+        #expect(implicitRequired[0].stringValue == "query")
+
+        // For explicit required parameter, we should see "differentField"
+        #expect(explicitRequired.count == 1)
+        #expect(explicitRequired[0].stringValue == "differentField")
     }
 }

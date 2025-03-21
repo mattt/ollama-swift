@@ -337,7 +337,7 @@ extension Client {
         }
 
         if let tools {
-            params["tools"] = .array(tools.map { .object($0.schema) })
+            params["tools"] = .array(try tools.map { try Value($0.schema) })
         }
 
         return try await fetch(.post, "/api/chat", params: params)

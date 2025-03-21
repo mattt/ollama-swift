@@ -273,15 +273,12 @@ struct ClientTests {
             name: "lookup_color",
             description: "Gets the RGB values (0-1) for common HTML color names",
             parameters: [
-                "type": "object",
-                "properties": [
-                    "colorName": [
-                        "type": "string",
-                        "description": "Name of the HTML color",
-                    ]
-                ],
-                "required": ["colorName"],
-            ]
+                "colorName": [
+                    "type": "string",
+                    "description": "Name of the HTML color",
+                ]
+            ],
+            required: ["colorName"]
         ) { colorName in
             let colors: [String: HexColorInput] = [
                 "papayawhip": .init(red: 1.0, green: 0.937, blue: 0.835),

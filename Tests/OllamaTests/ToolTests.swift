@@ -98,6 +98,11 @@ struct ToolTests {
 
     @Test
     func testBackwardsCompatibilityWithFullSchema() throws {
+        // Define a simple struct for testing
+        struct TestInput: Codable {
+            let query: String
+        }
+        
         // Create a tool using the old style (full schema in parameters)
         let oldStyleTool = Tool(
             name: "test_tool",
@@ -163,6 +168,11 @@ struct ToolTests {
 
     @Test
     func testBackwardsCompatibilityWithRequiredField() throws {
+        // Define a simple struct for testing
+        struct TestInput: Codable {
+            let query: String
+        }
+
         // Create a tool with a full schema but no explicit required parameter
         let toolWithImplicitRequired = Tool(
             name: "test_tool",
@@ -222,9 +232,4 @@ struct ToolTests {
         #expect(explicitRequired.count == 1)
         #expect(explicitRequired[0].stringValue == "differentField")
     }
-}
-
-// Define a simple struct for testing
-struct TestInput: Codable {
-    let query: String
 }

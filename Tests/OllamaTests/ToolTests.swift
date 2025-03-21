@@ -7,13 +7,16 @@ import Testing
 struct ToolTests {
     @Test
     func verifyToolSchema() throws {
-        let schema = hexColorTool.schema
+        guard case let .object(schema) = hexColorTool.schemaValue else {
+            Issue.record("Schema is not an object")
+            return
+        }
 
         // Verify basic schema structure
         #expect(schema["type"]?.stringValue == "function")
 
         guard let function = schema["function"]?.objectValue else {
-            #expect(Bool(false), "Missing or invalid function object in schema")
+            Issue.record("Missing or invalid function object in schema")
             return
         }
 
@@ -21,14 +24,14 @@ struct ToolTests {
         #expect(function["description"]?.stringValue != nil)
 
         guard let parameters = function["parameters"]?.objectValue else {
-            #expect(Bool(false), "Missing or invalid parameters in schema")
+            Issue.record("Missing or invalid parameters in schema")
             return
         }
 
         #expect(parameters["type"]?.stringValue == "object")
 
         guard let properties = parameters["properties"]?.objectValue else {
-            #expect(Bool(false), "Missing or invalid properties in parameters")
+            Issue.record("Missing or invalid properties in parameters")
             return
         }
         #expect(properties.count == 3, "Expected 3 parameters, got \(properties.count)")
@@ -36,7 +39,7 @@ struct ToolTests {
         // Check required parameter definitions and constraints
         for (key, value) in properties {
             guard let paramObj = value.objectValue else {
-                #expect(Bool(false), "Missing parameter object for \(key)")
+                Issue.record("Missing parameter object for \(key)")
                 continue
             }
 

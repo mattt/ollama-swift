@@ -26,8 +26,7 @@ struct ClientTests {
         let response = try await ollama.generate(
             model: "llama3.2",
             prompt: prompt,
-            images: [imageData],
-            stream: false
+            images: [imageData]
         )
 
         #expect(!response.response.isEmpty)
@@ -37,6 +36,21 @@ struct ClientTests {
         #expect(response.totalDuration ?? 0 > 0)
         #expect(response.loadDuration ?? 0 > 0)
         #expect(response.promptEvalCount ?? 0 > 0)
+    }
+    
+    @Test
+    func testGenerateStream() async throws {
+        let response = await ollama.generateStream(
+            model: "llama3.2",
+            prompt: "[System]: You are a helpful AI assistant. \n [User]: Write a haiku about llamas."
+        )
+        
+        var collect: [String] = []
+        for try await res in response {
+            collect.append(res.response)
+        }
+
+        #expect(!collect.isEmpty)
     }
 
     @Test
@@ -50,6 +64,25 @@ struct ClientTests {
             model: "llama3.2",
             messages: messages)
         #expect(!response.message.content.isEmpty)
+    }
+
+    @Test
+    func testChatStream() async throws {
+        let messages: [Chat.Message] = [
+            .system("You are a helpful AI assistant."),
+            .user("Write a haiku about llamas."),
+        ]
+
+        let response = try await ollama.chatStream(
+            model: "llama3.2",
+            messages: messages)
+        
+        var collect: [String] = []
+        for try await res in response {
+            collect.append(res.message.content)
+        }
+
+        #expect(!collect.isEmpty)
     }
 
     @Test
@@ -118,8 +151,7 @@ struct ClientTests {
             let response = try await ollama.generate(
                 model: "llama3.2",
                 prompt: "List 3 colors and their hex codes.",
-                format: "json",
-                stream: false
+                format: "json"
             )
 
             #expect(!response.response.isEmpty)
@@ -153,8 +185,7 @@ struct ClientTests {
             let response = try await ollama.generate(
                 model: "llama3.2",
                 prompt: "List 3 colors and their hex codes.",
-                format: schema,
-                stream: false
+                format: schema
             )
 
             #expect(!response.response.isEmpty)

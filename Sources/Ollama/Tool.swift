@@ -1,7 +1,7 @@
 /// Protocol defining the requirements for a tool that can be used with Ollama
-public protocol ToolProtocol {
+public protocol ToolProtocol: Sendable {
     /// The JSON Schema describing the tool's interface
-    var schema: [String: Value] { get }
+    var schema: any (Codable & Sendable) { get }
 }
 
 /// A type representing a tool that can be used with Ollama.
@@ -12,7 +12,7 @@ public protocol ToolProtocol {
 ///
 /// Tools can be provided to Ollama models that support tool calling
 /// (like Llama 3.1, Mistral Nemo, etc.) to extend their capabilities.
-public struct Tool<Input: Codable, Output: Codable>: ToolProtocol, Sendable {
+public struct Tool<Input: Codable, Output: Codable>: ToolProtocol {
     /// A JSON Schema for the tool.
     ///
     /// Models use the schema to understand when and how to use the tool.
@@ -22,28 +22,40 @@ public struct Tool<Input: Codable, Output: Codable>: ToolProtocol, Sendable {
     /// ```swift
     /// var schema: [String: Value] {
     ///     [
-    ///         "name": "get_current_weather",
-    ///         "description": "Get the current weather for a location",
-    ///         "parameters": [
-    ///             "type": "object",
-    ///             "properties": [
-    ///                 "location": [
-    ///                     "type": "string",
-    ///                     "description": "The location to get the weather for, e.g. San Francisco, CA"
+    ///         "type: "function",
+    ///         "function": [
+    ///             "name": "get_current_weather",
+    ///             "description": "Get the current weather for a location",
+    ///             "parameters": [
+    ///                 "type": "object",
+    ///                 "properties": [
+    ///                     "location": [
+    ///                         "type": "string",
+    ///                         "description": "The location to get the weather for, e.g. San Francisco, CA"
+    ///                     ],
+    ///                     "format": [
+    ///                         "type": "string",
+    ///                         "description": "The format to return the weather in, e.g. 'celsius' or 'fahrenheit'",
+    ///                         "enum": ["celsius", "fahrenheit"]
+    ///                     ]
     ///                 ],
-    ///                 "format": [
-    ///                     "type": "string",
-    ///                     "description": "The format to return the weather in, e.g. 'celsius' or 'fahrenheit'",
-    ///                     "enum": ["celsius", "fahrenheit"]
-    ///                 ]
-    ///             ],
-    ///             "required": ["location", "format"]
+    ///                 "required": ["location", "format"]
+    ///             ]
     ///         ]
     ///     ]
     /// }
     /// ```
-    public let schema: [String: Value]
+    public var schema: any (Codable & Sendable) { schemaValue }
+    private(set) var schemaValue: Value
 
+    /// The tool's implementation.
+    ///
+    /// This is the function that will be called when the tool is called.
+    ///
+    /// - Parameter input: The input parameters for the tool
+    /// - Returns: The output of the tool operation
+    /// - Throws: Any errors that occur during tool execution
+    /// - SeeAlso: `callAsFunction(_:)`
     private let implementation: @Sendable (Input) async throws -> Output
 
     /// Creates a new tool with the given schema and implementation.
@@ -55,10 +67,10 @@ public struct Tool<Input: Codable, Output: Codable>: ToolProtocol, Sendable {
         schema: [String: Value],
         implementation: @Sendable @escaping (Input) async throws -> Output
     ) {
-        self.schema = [
+        self.schemaValue = Value.object([
             "type": .string("function"),
             "function": .object(schema),
-        ]
+        ])
         self.implementation = implementation
     }
 
@@ -68,6 +80,8 @@ public struct Tool<Input: Codable, Output: Codable>: ToolProtocol, Sendable {
     ///   - name: The name of the tool
     ///   - description: A description of what the tool does
     ///   - parameters: A JSON Schema for the tool's parameters
+    ///   - required: The required parameters of the tool.
+    ///               If not provided, all parameters are optional.
     ///   - implementation: The function that implements the tool's behavior
     /// - Returns: A new Tool instance
     /// - Example:
@@ -93,13 +107,47 @@ public struct Tool<Input: Codable, Output: Codable>: ToolProtocol, Sendable {
         name: String,
         description: String,
         parameters: [String: Value],
+        required: [String] = [],
         implementation: @Sendable @escaping (Input) async throws -> Output
     ) {
+        var propertiesObject: [String: Value] = parameters
+        var requiredParams = required
+
+        // Check if the user passed a full schema and extract properties and required fields
+        if case .string("object") = parameters["type"],
+            case .object(let props) = parameters["properties"]
+        {
+
+            #if DEBUG
+                print(
+                    "Warning: You're passing a full JSON schema to the 'parameters' argument. "
+                        + "This usage is deprecated. Pass only the properties object instead.")
+            #endif
+
+            propertiesObject = props
+
+            // If required field exists in the parameters and no required array was explicitly passed
+            if required.isEmpty,
+                case .array(let reqArray) = parameters["required"]
+            {
+                requiredParams = reqArray.compactMap { value in
+                    if case .string(let str) = value {
+                        return str
+                    }
+                    return nil
+                }
+            }
+        }
+
         self.init(
             schema: [
                 "name": .string(name),
                 "description": .string(description),
-                "parameters": .object(parameters),
+                "parameters": .object([
+                    "type": .string("object"),
+                    "properties": .object(propertiesObject),
+                    "required": .array(requiredParams.map { .string($0) }),
+                ]),
             ],
             implementation: implementation
         )

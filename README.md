@@ -16,7 +16,7 @@ A Swift client library for interacting with the
 Add the following to your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/mattt/ollama-swift.git", from: "1.2.0")
+.package(url: "https://github.com/loopwork-ai/ollama-swift.git", from: "1.3.0")
 ```
 
 ## Usage
@@ -29,7 +29,6 @@ Add the following to your `Package.swift` file:
 > ```
 > ollama pull llama3.2
 > ```
-
 
 ### Initializing the client
 
@@ -253,20 +252,62 @@ let weatherTool = Tool<WeatherInput, WeatherOutput>(
     and temperature in °C.
     """,
     parameters: [
-        "type": "object",
-        "properties": [
-            "city": [
-                "type": "string",
-                "description": "The city to get weather for"
-            ]
-        ],
-        "required": ["city"]
-    ]
+        "city": [
+            "type": "string",
+            "description": "The city to get weather for"
+        ]
+    ],
+    required: ["city"]
 ) { input async throws -> WeatherOutput in
     // Implement weather lookup logic here
     return WeatherOutput(temperature: 18.5, conditions: "cloudy")
 }
 ```
+
+> [!IMPORTANT]
+> In version 1.3.0 and later, 
+> the `parameters` argument should contain only the properties object, 
+> not the full JSON schema of the tool. 
+> 
+> For backward compatibility, 
+> passing a full schema in the `parameters` argument 
+> (with `"type"`, `"properties"`, and `"required"` fields) 
+> is still supported but deprecated and will emit a warning in debug builds.
+>
+> <details>
+> <summary>Click to see code examples of old vs. new format</summary>
+>
+> ```swift
+> // ✅ New format
+> let weatherTool = Tool<WeatherInput, WeatherOutput>(
+>     name: "get_current_weather",
+>     description: "Get the current weather for a city",
+>     parameters: [
+>         "city": [
+>             "type": "string",
+>             "description": "The city to get weather for"
+>         ]
+>     ],
+>     required: ["city"]
+> ) { /* implementation */ }
+
+> // ❌ Deprecated format (still works but not recommended)
+> let weatherTool = Tool<WeatherInput, WeatherOutput>(
+>     name: "get_current_weather",
+>     description: "Get the current weather for a city",
+>     parameters: [
+>         "type": "object",
+>         "properties": [
+>             "city": [
+>                 "type": "string",
+>                 "description": "The city to get weather for"
+>             ]
+>         ],
+>         "required": ["city"]
+>     ]
+> ) { /* implementation */ }
+> ```
+> </details>
 
 #### Using Tools in Chat
 

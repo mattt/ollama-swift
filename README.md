@@ -62,6 +62,33 @@ do {
 }
 ```
 
+#### Streaming text generation
+
+Generate text in a streaming fashion to receive responses in real-time:
+
+```swift
+do {
+    let stream = try await client.generateStream(
+        model: "llama3.2",
+        prompt: "Tell me a joke about Swift programming.",
+        options: [
+            "temperature": 0.7,
+            "max_tokens": 100
+        ]
+    )
+
+    var fullResponse = ""
+    for try await chunk in stream {
+        // Process each chunk of the response as it arrives
+        print(chunk.response, terminator: "")
+        fullResponse += chunk.response
+    }
+    print("\nFull response: \(fullResponse)")
+} catch {
+    print("Error: \(error)")
+}
+```
+
 ### Chatting with a model
 
 Generate a chat completion:
@@ -81,9 +108,71 @@ do {
 }
 ```
 
+#### Streaming chat responses
+
+Stream chat responses to get real-time partial completions:
+
+```swift
+do {
+    let stream = try await client.chatStream(
+        model: "llama3.2",
+        messages: [
+            .system("You are a helpful assistant."),
+            .user("Write a short poem about Swift programming.")
+        ]
+    )
+
+    var fullContent = ""
+    for try await chunk in stream {
+        // Process each chunk of the message as it arrives
+        if let content = chunk.message.content {
+            print(content, terminator: "")
+            fullContent += content
+        }
+    }
+    print("\nComplete poem: \(fullContent)")
+} catch {
+    print("Error: \(error)")
+}
+```
+
+You can also stream chat responses when using tools:
+
+```swift
+do {
+    let stream = try await client.chatStream(
+        model: "llama3.2",
+        messages: [
+            .system("You are a helpful assistant that can check the weather."),
+            .user("What's the weather like in Portland?")
+        ],
+        tools: [weatherTool]
+    )
+
+    for try await chunk in stream {
+        // Check if the model is making tool calls
+        if let toolCalls = chunk.message.toolCalls, !toolCalls.isEmpty {
+            print("Model is requesting tool: \(toolCalls[0].function.name)")
+        }
+
+        // Print content from the message as it streams
+        if let content = chunk.message.content {
+            print(content, terminator: "")
+        }
+
+        // Check if this is the final chunk
+        if chunk.done {
+            print("\nResponse complete")
+        }
+    }
+} catch {
+    print("Error: \(error)")
+}
+```
+
 ### Using Structured Outputs
 
-You can request structured outputs from models by specifying a format. 
+You can request structured outputs from models by specifying a format.
 Pass `"json"` to get back a JSON string,
 or specify a full [JSON Schema](https://json-schema.org):
 
@@ -158,7 +247,7 @@ struct WeatherOutput: Codable {
 let weatherTool = Tool<WeatherInput, WeatherOutput>(
     name: "get_current_weather",
     description: """
-    Get the current weather for a city, 
+    Get the current weather for a city,
     with conditions ("sunny", "cloudy", etc.)
     and temperature in °C.
     """,
@@ -201,7 +290,7 @@ let weatherTool = Tool<WeatherInput, WeatherOutput>(
 >     ],
 >     required: ["city"]
 > ) { /* implementation */ }
-
+>
 > // ❌ Deprecated format (still works but not recommended)
 > let weatherTool = Tool<WeatherInput, WeatherOutput>(
 >     name: "get_current_weather",
@@ -270,22 +359,25 @@ enum ToolError {
 if let toolCall = response1.message.toolCalls?.first {
     // Parse the tool arguments
     guard let args = toolCall.function.arguments,
-          let red = Double(redStr, strict: false),
-          let green = Double(greenStr, strict: false),
-          let blue = Double(blueStr, strict: false) 
+          let redValue = args["red"],
+          let greenValue = args["green"],
+          let blueValue = args["blue"],
+          let red = Double(redValue, strict: false),
+          let green = Double(greenValue, strict: false),
+          let blue = Double(blueValue, strict: false)
     else {
         throw ToolError.invalidParameters
     }
-    
+
     let input = HexColorInput(
         red: red,
         green: green,
         blue: blue
     )
-    
+
     // Execute the tool with the input
     let hexColor = try await rgbToHexTool(input)
-    
+
     // Add the tool result to the conversation
     messages.append(.tool(hexColor))
 }
@@ -305,11 +397,11 @@ Generate embeddings for a given text:
 
 ```swift
 do {
-    let embeddings = try await client.embed(
+    let response = try await client.embed(
         model: "llama3.2",
         input: "Here is an article about llamas..."
     )
-    print("Embeddings: \(embeddings)")
+    print("Embeddings: \(response.embeddings)")
 } catch {
     print("Error: \(error)")
 }

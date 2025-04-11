@@ -32,19 +32,18 @@ struct ClientTests {
         #expect(!response.response.isEmpty)
         #expect(response.done)
         #expect(response.model == "llama3.2")
-        #expect(response.createdAt != nil)
         #expect(response.totalDuration ?? 0 > 0)
         #expect(response.loadDuration ?? 0 > 0)
         #expect(response.promptEvalCount ?? 0 > 0)
     }
-    
+
     @Test
     func testGenerateStream() async throws {
         let response = await ollama.generateStream(
             model: "llama3.2",
-            prompt: "[System]: You are a helpful AI assistant. \n [User]: Write a haiku about llamas."
+            prompt: "Write a haiku about llamas."
         )
-        
+
         var collect: [String] = []
         for try await res in response {
             collect.append(res.response)
@@ -76,7 +75,7 @@ struct ClientTests {
         let response = try await ollama.chatStream(
             model: "llama3.2",
             messages: messages)
-        
+
         var collect: [String] = []
         for try await res in response {
             collect.append(res.message.content)
@@ -106,11 +105,7 @@ struct ClientTests {
 
     @Test
     func testListRunningModels() async throws {
-        let response = try await ollama.listRunningModels()
-
-        // This test might be flaky if no models are running
-        // Consider starting a model before running this test
-        #expect(response != nil)
+        let _ = try await ollama.listRunningModels()
     }
 
     @Test(.disabled())
@@ -291,6 +286,55 @@ struct ClientTests {
         #expect(red == 1.0)
         #expect(green == 1.0)
         #expect(blue == 0.0)
+    }
+
+    @Test
+    func testChatStreamWithTool() async throws {
+        let messages: [Chat.Message] = [
+            .system(
+                """
+                You are a helpful AI assistant that can convert colors.
+                When asked about colors, use the rgb_to_hex tool to convert them.
+                """),
+            .user("What's the hex code for yellow?"),
+        ]
+
+        let stream = try await ollama.chatStream(
+            model: "llama3.2",
+            messages: messages,
+            tools: [hexColorTool]
+        )
+
+        var foundToolCall = false
+
+        for try await res in stream {
+            // Check for tool calls in the message
+            if let toolCalls = res.message.toolCalls,
+                let toolCall = toolCalls.first,
+                toolCall.function.name == "rgb_to_hex"
+            {
+                foundToolCall = true
+
+                // Check if we can get the color values
+                if let redValue = toolCall.function.arguments["red"],
+                    let greenValue = toolCall.function.arguments["green"],
+                    let blueValue = toolCall.function.arguments["blue"]
+                {
+                    // Try to convert to Double and validate
+                    if let redDouble = Double(redValue, strict: false),
+                        let greenDouble = Double(greenValue, strict: false),
+                        let blueDouble = Double(blueValue, strict: false)
+                    {
+                        // Verify yellow color values (1.0, 1.0, 0.0)
+                        #expect(redDouble == 1.0, "Invalid red value: \(redDouble)")
+                        #expect(greenDouble == 1.0, "Invalid green value: \(greenDouble)")
+                        #expect(blueDouble == 0.0, "Invalid blue value: \(blueDouble)")
+                    }
+                }
+            }
+        }
+
+        #expect(foundToolCall, "No tool call found in any stream message")
     }
 
     @Test

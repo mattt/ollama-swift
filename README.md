@@ -290,7 +290,7 @@ let weatherTool = Tool<WeatherInput, WeatherOutput>(
 >     ],
 >     required: ["city"]
 > ) { /* implementation */ }
-
+>
 > // ❌ Deprecated format (still works but not recommended)
 > let weatherTool = Tool<WeatherInput, WeatherOutput>(
 >     name: "get_current_weather",

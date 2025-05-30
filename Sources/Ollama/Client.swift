@@ -784,7 +784,7 @@ extension Client {
         public let info: [String: Value]
 
         /// Model capabilities (e.g., `"completion"`, `"vision"`).
-        public let capabilities: Set<String>
+        public let capabilities: Set<Model.Capability>
 
         private enum CodingKeys: String, CodingKey {
             case modelfile

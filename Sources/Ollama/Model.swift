@@ -152,4 +152,54 @@ public enum Model {
             case parentModel = "parent_model"
         }
     }
+
+    /// Represents a capability that a model may support.
+    public struct Capability: Hashable, Comparable, RawRepresentable, Sendable, Codable,
+        ExpressibleByStringLiteral
+    {
+        public typealias RawValue = String
+
+        public let rawValue: String
+
+        public init(rawValue: String) {
+            self.rawValue = rawValue
+        }
+
+        public init(stringLiteral value: StringLiteralType) {
+            self.init(rawValue: value)
+        }
+
+        public static func < (lhs: Capability, rhs: Capability) -> Bool {
+            return lhs.rawValue < rhs.rawValue
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let rawValue = try container.decode(String.self)
+            self.init(rawValue: rawValue)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(rawValue)
+        }
+
+        /// The ability to generate text completions based on a prompt.
+        public static let completion: Capability = "completion"
+
+        /// The ability to use tools and function calling capabilities.
+        public static let tools: Capability = "tools"
+
+        /// The ability to insert text at a specific position in the context.
+        public static let insert: Capability = "insert"
+
+        /// The ability to process and understand visual inputs.
+        public static let vision: Capability = "vision"
+
+        /// The ability to generate embeddings for text inputs.
+        public static let embedding: Capability = "embedding"
+
+        /// The ability to provide thinking/reasoning steps in the output.
+        public static let thinking: Capability = "thinking"
+    }
 }

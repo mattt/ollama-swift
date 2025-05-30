@@ -769,22 +769,22 @@ extension Client {
     /// A response containing information about a model.
     public struct ShowModelResponse: Decodable, Sendable {
         /// The contents of the Modelfile for the model.
-        let modelfile: String
+        public let modelfile: String
 
         /// The model parameters.
-        let parameters: String
+        public let parameters: String
 
         /// The prompt template used by the model.
-        let template: String
+        public let template: String
 
         /// Detailed information about the model.
-        let details: Model.Details
+        public let details: Model.Details
 
         /// Additional model information.
-        let info: [String: Value]
+        public let info: [String: Value]
 
         /// List of model capabilities.
-        let capabilities: [String]
+        public let capabilities: [String]
 
         private enum CodingKeys: String, CodingKey {
             case modelfile

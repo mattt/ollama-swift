@@ -407,6 +407,30 @@ do {
 }
 ```
 
+Generate embeddings for multiple texts in a single batch:
+
+```swift
+do {
+    let texts = [
+        "First article about llamas...",
+        "Second article about alpacas...",
+        "Third article about vicuñas..."
+    ]
+
+    let response = try await client.embed(
+        model: "llama3.2",
+        inputs: texts
+    )
+
+    // Access embeddings for each input
+    for (index, embedding) in response.embeddings.rawValue.enumerated() {
+        print("Embedding \(index): \(embedding.count) dimensions")
+    }
+} catch {
+    print("Error: \(error)")
+}
+```
+
 ### Managing models
 
 #### Listing models

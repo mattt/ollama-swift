@@ -96,6 +96,27 @@ struct ClientTests {
     }
 
     @Test
+    func testBatchEmbed() async throws {
+        let inputs = [
+            "This is the first test sentence.",
+            "This is the second test sentence.",
+            "This is the third test sentence.",
+        ]
+        let response = try await ollama.embed(model: "llama3.2", inputs: inputs)
+
+        #expect(response.embeddings.rawValue.count == inputs.count)
+        #expect(!response.embeddings.rawValue.isEmpty)
+        #expect(response.totalDuration > 0)
+        #expect(response.loadDuration > 0)
+        #expect(response.promptEvalCount > 0)
+
+        // Verify each embedding is non-empty
+        for embedding in response.embeddings.rawValue {
+            #expect(!embedding.isEmpty)
+        }
+    }
+
+    @Test
     func testListModels() async throws {
         let response = try await ollama.listModels()
 

@@ -578,6 +578,39 @@ extension Client {
 
         return try await fetch(.post, "/api/embed", params: params)
     }
+
+    /// Generates embeddings from a model for multiple input texts.
+    ///
+    /// This method supports batch processing of multiple texts in a single API call,
+    /// which is more efficient than making multiple individual calls.
+    ///
+    /// - Parameters:
+    ///   - model: The name of the model to use for generating embeddings.
+    ///   - inputs: An array of texts to generate embeddings for.
+    ///   - truncate: If true, truncates the end of each input to fit within context length. Returns error if false and context length is exceeded.
+    ///   - options: Additional model parameters as specified in the Modelfile documentation.
+    /// - Returns: An `EmbedResponse` containing the generated embeddings for all inputs and additional information.
+    /// - Throws: An error if the request fails or the response cannot be decoded.
+    public func embed(
+        model: Model.ID,
+        inputs: [String],
+        truncate: Bool = true,
+        options: [String: Value]? = nil
+    )
+        async throws -> EmbedResponse
+    {
+        var params: [String: Value] = [
+            "model": .string(model.rawValue),
+            "input": .array(inputs.map { .string($0) }),
+            "truncate": .bool(truncate),
+        ]
+
+        if let options = options {
+            params["options"] = .object(options)
+        }
+
+        return try await fetch(.post, "/api/embed", params: params)
+    }
 }
 
 // MARK: - List Models

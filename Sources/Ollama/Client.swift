@@ -842,3 +842,24 @@ extension Client {
         return try await fetch(.post, "/api/show", params: params)
     }
 }
+
+// MARK: - Get Ollama Version
+extension Client {
+    /// A response containing information about a model.
+    public struct VersionResponse: Decodable, Sendable {
+        /// The ollama version.
+        public let version: String
+
+        private enum CodingKeys: String, CodingKey {
+            case version
+        }
+    }
+
+    /// Get the running version of the Ollama server.
+    ///
+    /// - Returns: A `VersionResponse` containing the ollama version.
+    /// - Throws: An error if the request fails or the response cannot be decoded.
+    public func version() async throws -> VersionResponse {
+        return try await fetch(.get, "/api/version")
+    }
+}

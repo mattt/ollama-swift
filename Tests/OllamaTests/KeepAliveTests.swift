@@ -234,24 +234,21 @@ struct KeepAliveTests {
             let hours: KeepAlive.Duration = .hours(2)
 
             // Test structure
-            switch seconds {
-            case .seconds(let value):
+            if case .seconds(let value) = seconds {
                 #expect(value == 30)
-            default:
+            } else {
                 Issue.record("Expected .seconds(30)")
             }
 
-            switch minutes {
-            case .minutes(let value):
+            if case .minutes(let value) = minutes {
                 #expect(value == 5)
-            default:
+            } else {
                 Issue.record("Expected .minutes(5)")
             }
 
-            switch hours {
-            case .hours(let value):
+            if case .hours(let value) = hours {
                 #expect(value == 2)
-            default:
+            } else {
                 Issue.record("Expected .hours(2)")
             }
         }

@@ -845,14 +845,10 @@ extension Client {
 
 // MARK: - Get Ollama Version
 extension Client {
-    /// A response containing information about a model.
+    /// A response containing the version of the Ollama server.
     public struct VersionResponse: Decodable, Sendable {
-        /// The ollama version.
+        /// The Ollama version.
         public let version: String
-
-        private enum CodingKeys: String, CodingKey {
-            case version
-        }
     }
 
     /// Get the running version of the Ollama server.

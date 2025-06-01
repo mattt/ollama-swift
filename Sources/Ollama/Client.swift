@@ -295,6 +295,7 @@ extension Client {
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
     ///   - context: The context parameter returned from a previous request to keep a short conversational memory.
     ///   - raw: If true, no formatting will be applied to the prompt.
+    ///   - keepAlive: Controls how long the model will stay loaded into memory following the request. Defaults to `.default` which uses the server's default (typically 5 minutes).
     /// - Returns: A `GenerateResponse` containing the generated text and additional information.
     /// - Throws: An error if the request fails or the response cannot be decoded.
     public func generate(
@@ -306,7 +307,8 @@ extension Client {
         system: String? = nil,
         template: String? = nil,
         context: [Int]? = nil,
-        raw: Bool = false
+        raw: Bool = false,
+        keepAlive: KeepAlive = .default
     ) async throws -> GenerateResponse {
         let params = createGenerateParams(
             model: model,
@@ -318,6 +320,7 @@ extension Client {
             template: template,
             context: context,
             raw: raw,
+            keepAlive: keepAlive,
             stream: false
         )
         return try await fetch(.post, "/api/generate", params: params)
@@ -335,6 +338,7 @@ extension Client {
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
     ///   - context: The context parameter returned from a previous request to keep a short conversational memory.
     ///   - raw: If true, no formatting will be applied to the prompt.
+    ///   - keepAlive: Controls how long the model will stay loaded into memory following the request. Defaults to `.default` which uses the server's default (typically 5 minutes).
     /// - Returns: An async throwing stream of `GenerateResponse` objects containing generated text chunks and additional information.
     /// - Throws: An error if the request fails or responses cannot be decoded.
     public func generateStream(
@@ -346,7 +350,8 @@ extension Client {
         system: String? = nil,
         template: String? = nil,
         context: [Int]? = nil,
-        raw: Bool = false
+        raw: Bool = false,
+        keepAlive: KeepAlive = .default
     ) -> AsyncThrowingStream<GenerateResponse, Swift.Error> {
         let params = createGenerateParams(
             model: model,
@@ -358,6 +363,7 @@ extension Client {
             template: template,
             context: context,
             raw: raw,
+            keepAlive: keepAlive,
             stream: true
         )
         return fetchStream(.post, "/api/generate", params: params)
@@ -373,6 +379,7 @@ extension Client {
         template: String?,
         context: [Int]?,
         raw: Bool,
+        keepAlive: KeepAlive,
         stream: Bool
     ) -> [String: Value] {
         var params: [String: Value] = [
@@ -399,6 +406,9 @@ extension Client {
         }
         if let context = context {
             params["context"] = .array(context.map { .double(Double($0)) })
+        }
+        if let keepAliveValue = keepAlive.value {
+            params["keep_alive"] = keepAliveValue
         }
 
         return params
@@ -444,6 +454,7 @@ extension Client {
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
     ///   - format: Optional format specification. Can be either a string ("json") or a JSON schema to constrain the model's output.
     ///   - tools: Optional array of tools that can be called by the model.
+    ///   - keepAlive: Controls how long the model will stay loaded into memory following the request. Defaults to `.default` which uses the server's default (typically 5 minutes).
     /// - Returns: A `ChatResponse` containing the generated message and additional information.
     /// - Throws: An error if the request fails or the response cannot be decoded.
     public func chat(
@@ -452,7 +463,8 @@ extension Client {
         options: [String: Value]? = nil,
         template: String? = nil,
         format: Value? = nil,
-        tools: [any ToolProtocol]? = nil
+        tools: [any ToolProtocol]? = nil,
+        keepAlive: KeepAlive = .default
     ) async throws -> ChatResponse {
         let params = try createChatParams(
             model: model,
@@ -461,6 +473,7 @@ extension Client {
             template: template,
             format: format,
             tools: tools,
+            keepAlive: keepAlive,
             stream: false
         )
         return try await fetch(.post, "/api/chat", params: params)
@@ -473,6 +486,9 @@ extension Client {
     ///   - messages: The messages of the chat, used to keep a chat memory.
     ///   - options: Additional model parameters as specified in the Modelfile documentation.
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
+    ///   - format: Optional format specification. Can be either a string ("json") or a JSON schema to constrain the model's output.
+    ///   - tools: Optional array of tools that can be called by the model.
+    ///   - keepAlive: Controls how long the model will stay loaded into memory following the request. Defaults to `.default` which uses the server's default (typically 5 minutes).
     /// - Returns: An async throwing stream of `ChatResponse` objects containing generated message chunks and additional information.
     /// - Throws: An error if the request fails or responses cannot be decoded.
     public func chatStream(
@@ -481,7 +497,8 @@ extension Client {
         options: [String: Value]? = nil,
         template: String? = nil,
         format: Value? = nil,
-        tools: [any ToolProtocol]? = nil
+        tools: [any ToolProtocol]? = nil,
+        keepAlive: KeepAlive = .default
     ) throws -> AsyncThrowingStream<ChatResponse, Swift.Error> {
         let params = try createChatParams(
             model: model,
@@ -490,6 +507,7 @@ extension Client {
             template: template,
             format: format,
             tools: tools,
+            keepAlive: keepAlive,
             stream: true
         )
         return fetchStream(.post, "/api/chat", params: params)
@@ -502,6 +520,7 @@ extension Client {
         template: String?,
         format: Value?,
         tools: [any ToolProtocol]?,
+        keepAlive: KeepAlive,
         stream: Bool
     ) throws -> [String: Value] {
         var params: [String: Value] = [
@@ -524,6 +543,10 @@ extension Client {
 
         if let tools {
             params["tools"] = .array(try tools.map { try Value($0.schema) })
+        }
+
+        if let keepAliveValue = keepAlive.value {
+            params["keep_alive"] = keepAliveValue
         }
 
         return params

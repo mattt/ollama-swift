@@ -54,7 +54,8 @@ do {
         options: [
             "temperature": 0.7,
             "max_tokens": 100
-        ]
+        ],
+        keepAlive: .minutes(10)  // Keep model loaded for 10 minutes
     )
     print(response.response)
 } catch {
@@ -100,7 +101,8 @@ do {
         messages: [
             .system("You are a helpful assistant."),
             .user("In which city is Apple Inc. located?")
-        ]
+        ],
+        keepAlive: .minutes(10)  // Keep model loaded for 10 minutes
     )
     print(response.message.content)
 } catch {
@@ -220,6 +222,65 @@ let response = try await client.chat(
 ```
 
 The format parameter works with both `chat` and `generate` methods.
+
+### Managing Model Memory with Keep-Alive
+
+You can control how long a model stays loaded in memory using the `keepAlive` parameter. This is useful for managing memory usage and response times.
+
+```swift
+// Use server default (typically 5 minutes)
+let response = try await client.generate(
+    model: "llama3.2",
+    prompt: "Hello!"
+    // keepAlive defaults to .default
+)
+
+// Keep model loaded for 10 minutes
+let response = try await client.generate(
+    model: "llama3.2",
+    prompt: "Hello!",
+    keepAlive: .minutes(10)
+)
+
+// Keep model loaded for 2 hours
+let response = try await client.chat(
+    model: "llama3.2",
+    messages: [.user("Hello!")],
+    keepAlive: .hours(2)
+)
+
+// Keep model loaded for 30 seconds
+let response = try await client.generate(
+    model: "llama3.2",
+    prompt: "Hello!",
+    keepAlive: .seconds(30)
+)
+
+// Keep model loaded indefinitely
+let response = try await client.chat(
+    model: "llama3.2",
+    messages: [.user("Hello!")],
+    keepAlive: .indefinite
+)
+
+// Unload model immediately after response
+let response = try await client.generate(
+    model: "llama3.2",
+    prompt: "Hello!",
+    keepAlive: .none
+)
+```
+
+- **`.default`** - Use the server's default keep-alive behavior (default if not specified)
+- **`.none`** - Unload immediately after the request
+- **`.seconds(Int)`** - Keep loaded for the specified number of seconds
+- **`.minutes(Int)`** - Keep loaded for the specified number of minutes  
+- **`.hours(Int)`** - Keep loaded for the specified number of hours
+- **`.forever`** - Keep loaded indefinitely
+
+> [!NOTE]
+> Zero durations (e.g., `.seconds(0)`) are treated as `.none` (unload immediately).
+> Negative durations are treated as `.forever` (keep loaded indefinitely).
 
 ### Using Tools
 

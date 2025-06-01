@@ -223,6 +223,49 @@ let response = try await client.chat(
 
 The format parameter works with both `chat` and `generate` methods.
 
+### Using Thinking Models
+
+Some models support a "thinking" mode
+where they show their reasoning process before providing the final answer. 
+This is particularly useful for complex reasoning tasks.
+
+```swift
+// Generate with thinking enabled
+let response = try await client.generate(
+    model: "deepseek-r1:8b",
+    prompt: "What is 17 * 23? Show your work.",
+    think: true
+)
+
+print("Thinking: \(response.thinking ?? "None")")
+print("Answer: \(response.response)")
+```
+
+You can also use thinking in chat conversations:
+
+```swift
+let response = try await client.chat(
+    model: "deepseek-r1:8b",
+    messages: [
+        .system("You are a helpful mathematician."),
+        .user("Calculate 9.9 + 9.11 and explain your reasoning.")
+    ],
+    think: true
+)
+
+print("Thinking: \(response.message.thinking ?? "None")")
+print("Response: \(response.message.content)")
+```
+
+> [!TIP]
+> You can check which models support thinking by examining their capabilities:
+> ```swift
+> let modelInfo = try await client.showModel("deepseek-r1:8b")
+> if modelInfo.capabilities.contains(.thinking) {
+>     print("🧠 This model supports thinking!")
+> }
+> ```
+
 ### Managing Model Memory with Keep-Alive
 
 You can control how long a model stays loaded in memory using the `keepAlive` parameter. This is useful for managing memory usage and response times.

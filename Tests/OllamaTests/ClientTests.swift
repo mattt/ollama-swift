@@ -129,6 +129,14 @@ struct ClientTests {
         let _ = try await ollama.listRunningModels()
     }
 
+    @Test
+    func testVersion() async throws {
+        let response = try await ollama.version()
+        
+        #expect(!response.version.isEmpty)
+        #expect(response.version.contains("."))
+    }
+
     @Test(.disabled())
     func testCreateShowDeleteModel() async throws {
         let base = "llama3.2"

@@ -260,7 +260,7 @@ let response = try await client.generate(
 let response = try await client.chat(
     model: "llama3.2",
     messages: [.user("Hello!")],
-    keepAlive: .indefinite
+    keepAlive: .forever
 )
 
 // Unload model immediately after response

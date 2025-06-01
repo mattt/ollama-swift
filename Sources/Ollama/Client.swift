@@ -261,6 +261,7 @@ extension Client {
         public let response: String
         public let done: Bool
         public let context: [Int]?
+        public let thinking: String?
         public let totalDuration: TimeInterval?
         public let loadDuration: TimeInterval?
         public let promptEvalCount: Int?
@@ -274,6 +275,7 @@ extension Client {
             case response
             case done
             case context
+            case thinking
             case totalDuration = "total_duration"
             case loadDuration = "load_duration"
             case promptEvalCount = "prompt_eval_count"
@@ -295,6 +297,7 @@ extension Client {
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
     ///   - context: The context parameter returned from a previous request to keep a short conversational memory.
     ///   - raw: If true, no formatting will be applied to the prompt.
+    ///   - think: If true, the model will think about the response before responding. Requires thinking support from the model.
     ///   - keepAlive: Controls how long the model will stay loaded into memory following the request. Defaults to `.default` which uses the server's default (typically 5 minutes).
     /// - Returns: A `GenerateResponse` containing the generated text and additional information.
     /// - Throws: An error if the request fails or the response cannot be decoded.
@@ -308,6 +311,7 @@ extension Client {
         template: String? = nil,
         context: [Int]? = nil,
         raw: Bool = false,
+        think: Bool? = nil,
         keepAlive: KeepAlive = .default
     ) async throws -> GenerateResponse {
         let params = createGenerateParams(
@@ -320,6 +324,7 @@ extension Client {
             template: template,
             context: context,
             raw: raw,
+            think: think,
             keepAlive: keepAlive,
             stream: false
         )
@@ -338,6 +343,7 @@ extension Client {
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
     ///   - context: The context parameter returned from a previous request to keep a short conversational memory.
     ///   - raw: If true, no formatting will be applied to the prompt.
+    ///   - think: If true, the model will think about the response before responding. Requires thinking support from the model.
     ///   - keepAlive: Controls how long the model will stay loaded into memory following the request. Defaults to `.default` which uses the server's default (typically 5 minutes).
     /// - Returns: An async throwing stream of `GenerateResponse` objects containing generated text chunks and additional information.
     /// - Throws: An error if the request fails or responses cannot be decoded.
@@ -351,6 +357,7 @@ extension Client {
         template: String? = nil,
         context: [Int]? = nil,
         raw: Bool = false,
+        think: Bool? = nil,
         keepAlive: KeepAlive = .default
     ) -> AsyncThrowingStream<GenerateResponse, Swift.Error> {
         let params = createGenerateParams(
@@ -363,6 +370,7 @@ extension Client {
             template: template,
             context: context,
             raw: raw,
+            think: think,
             keepAlive: keepAlive,
             stream: true
         )
@@ -379,6 +387,7 @@ extension Client {
         template: String?,
         context: [Int]?,
         raw: Bool,
+        think: Bool?,
         keepAlive: KeepAlive,
         stream: Bool
     ) -> [String: Value] {
@@ -406,6 +415,9 @@ extension Client {
         }
         if let context = context {
             params["context"] = .array(context.map { .double(Double($0)) })
+        }
+        if let think = think {
+            params["think"] = .bool(think)
         }
         if let keepAliveValue = keepAlive.value {
             params["keep_alive"] = keepAliveValue
@@ -454,6 +466,7 @@ extension Client {
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
     ///   - format: Optional format specification. Can be either a string ("json") or a JSON schema to constrain the model's output.
     ///   - tools: Optional array of tools that can be called by the model.
+    ///   - think: If true, the model will think about the response before responding. Requires thinking support from the model.
     ///   - keepAlive: Controls how long the model will stay loaded into memory following the request. Defaults to `.default` which uses the server's default (typically 5 minutes).
     /// - Returns: A `ChatResponse` containing the generated message and additional information.
     /// - Throws: An error if the request fails or the response cannot be decoded.
@@ -464,6 +477,7 @@ extension Client {
         template: String? = nil,
         format: Value? = nil,
         tools: [any ToolProtocol]? = nil,
+        think: Bool? = nil,
         keepAlive: KeepAlive = .default
     ) async throws -> ChatResponse {
         let params = try createChatParams(
@@ -473,6 +487,7 @@ extension Client {
             template: template,
             format: format,
             tools: tools,
+            think: think,
             keepAlive: keepAlive,
             stream: false
         )
@@ -488,6 +503,7 @@ extension Client {
     ///   - template: The prompt template to use (overrides what is defined in the Modelfile).
     ///   - format: Optional format specification. Can be either a string ("json") or a JSON schema to constrain the model's output.
     ///   - tools: Optional array of tools that can be called by the model.
+    ///   - think: If true, the model will think about the response before responding. Requires thinking support from the model.
     ///   - keepAlive: Controls how long the model will stay loaded into memory following the request. Defaults to `.default` which uses the server's default (typically 5 minutes).
     /// - Returns: An async throwing stream of `ChatResponse` objects containing generated message chunks and additional information.
     /// - Throws: An error if the request fails or responses cannot be decoded.
@@ -498,6 +514,7 @@ extension Client {
         template: String? = nil,
         format: Value? = nil,
         tools: [any ToolProtocol]? = nil,
+        think: Bool? = nil,
         keepAlive: KeepAlive = .default
     ) throws -> AsyncThrowingStream<ChatResponse, Swift.Error> {
         let params = try createChatParams(
@@ -507,6 +524,7 @@ extension Client {
             template: template,
             format: format,
             tools: tools,
+            think: think,
             keepAlive: keepAlive,
             stream: true
         )
@@ -520,6 +538,7 @@ extension Client {
         template: String?,
         format: Value?,
         tools: [any ToolProtocol]?,
+        think: Bool?,
         keepAlive: KeepAlive,
         stream: Bool
     ) throws -> [String: Value] {
@@ -543,6 +562,10 @@ extension Client {
 
         if let tools {
             params["tools"] = .array(try tools.map { try Value($0.schema) })
+        }
+
+        if let think = think {
+            params["think"] = .bool(think)
         }
 
         if let keepAliveValue = keepAlive.value {

@@ -57,6 +57,9 @@ public enum Chat {
         /// Optional array of tool calls associated with the message
         public let toolCalls: [ToolCall]?
 
+        /// The thinking process of the assistant when thinking is enabled
+        public let thinking: String?
+
         /// Creates a new chat message.
         ///
         /// - Parameters:
@@ -64,16 +67,19 @@ public enum Chat {
         ///   - content: The content of the message.
         ///   - images: Optional array of image data associated with the message.
         ///   - toolCalls: Optional array of tool calls associated with the message.
+        ///   - thinking: The thinking process of the assistant when thinking is enabled.
         private init(
             role: Role,
             content: String,
             images: [Data]? = nil,
-            toolCalls: [ToolCall]? = nil
+            toolCalls: [ToolCall]? = nil,
+            thinking: String? = nil
         ) {
             self.role = role
             self.content = content
             self.images = images
             self.toolCalls = toolCalls
+            self.thinking = thinking
         }
 
         /// Creates a system message.
@@ -116,17 +122,20 @@ public enum Chat {
         ///   - content: The content of the message.
         ///   - images: Optional array of image data associated with the message.
         ///   - toolCalls: Optional array of tool calls associated with the message.
+        ///   - thinking: The thinking process of the assistant when thinking is enabled.
         /// - Returns: A new `Message` instance with the assistant role.
         public static func assistant(
             _ content: String,
             images: [Data]? = nil,
-            toolCalls: [ToolCall]? = nil
+            toolCalls: [ToolCall]? = nil,
+            thinking: String? = nil
         ) -> Message {
             return Message(
                 role: .assistant,
                 content: content,
                 images: images,
-                toolCalls: toolCalls
+                toolCalls: toolCalls,
+                thinking: thinking
             )
         }
 
@@ -150,6 +159,7 @@ extension Chat.Message: Codable {
         case content
         case images
         case toolCalls = "tool_calls"
+        case thinking
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -159,6 +169,7 @@ extension Chat.Message: Codable {
         try container.encode(content, forKey: .content)
         try container.encodeIfPresent(images, forKey: .images)
         try container.encodeIfPresent(toolCalls, forKey: .toolCalls)
+        try container.encodeIfPresent(thinking, forKey: .thinking)
     }
 
     public init(from decoder: Decoder) throws {
@@ -168,5 +179,6 @@ extension Chat.Message: Codable {
         content = try container.decode(String.self, forKey: .content)
         images = try container.decodeIfPresent([Data].self, forKey: .images)
         toolCalls = try container.decodeIfPresent([ToolCall].self, forKey: .toolCalls)
+        thinking = try container.decodeIfPresent(String.self, forKey: .thinking)
     }
 }

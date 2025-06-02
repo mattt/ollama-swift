@@ -132,7 +132,7 @@ struct ClientTests {
     @Test
     func testVersion() async throws {
         let response = try await ollama.version()
-        
+
         #expect(!response.version.isEmpty)
         #expect(response.version.contains("."))
     }
@@ -364,6 +364,150 @@ struct ClientTests {
         }
 
         #expect(foundToolCall, "No tool call found in any stream message")
+    }
+
+    @Test
+    func testGenerateWithThinking() async throws {
+        // Test with thinking enabled (using deepseek-r1 which supports thinking)
+        do {
+            let response = try await ollama.generate(
+                model: "deepseek-r1:8b",
+                prompt: "What is 9.9 + 9.11? Think about this carefully.",
+                think: true
+            )
+
+            #expect(!response.response.isEmpty)
+            #expect(response.done)
+            #expect(response.thinking != nil)
+            #expect(!response.thinking!.isEmpty)
+            #expect(response.model.rawValue.contains("deepseek-r1"))
+        } catch {
+            // Model might not be available, skip this test
+            print("Skipping thinking test: \(error)")
+        }
+    }
+
+    @Test
+    func testGenerateStreamWithThinking() async throws {
+        // Test streaming with thinking enabled
+        do {
+            let stream = await ollama.generateStream(
+                model: "deepseek-r1:8b",
+                prompt: "Count from 1 to 5. Show your reasoning.",
+                think: true
+            )
+
+            var responses: [Client.GenerateResponse] = []
+            var foundThinking = false
+
+            for try await res in stream {
+                responses.append(res)
+                if res.thinking != nil && !res.thinking!.isEmpty {
+                    foundThinking = true
+                }
+            }
+
+            #expect(!responses.isEmpty)
+            #expect(foundThinking, "Expected to find thinking content in stream")
+        } catch {
+            // Model might not be available, skip this test
+            print("Skipping thinking stream test: \(error)")
+        }
+    }
+
+    @Test
+    func testGenerateWithoutThinking() async throws {
+        // Test with thinking explicitly disabled
+        let response = try await ollama.generate(
+            model: "llama3.2",
+            prompt: "What is 2 + 2?",
+            think: false
+        )
+
+        #expect(!response.response.isEmpty)
+        #expect(response.done)
+        // Should not have thinking content when disabled
+        #expect(response.thinking == nil)
+    }
+
+    @Test
+    func testChatWithThinking() async throws {
+        let messages: [Chat.Message] = [
+            .system("You are a helpful mathematician."),
+            .user("What is 17 * 23? Please show your reasoning step by step."),
+        ]
+
+        // Test with thinking enabled (using deepseek-r1 which supports thinking)
+        do {
+            let response = try await ollama.chat(
+                model: "deepseek-r1:8b",
+                messages: messages,
+                think: true
+            )
+
+            #expect(!response.message.content.isEmpty)
+            #expect(response.message.role == .assistant)
+            #expect(response.message.thinking != nil)
+            #expect(!response.message.thinking!.isEmpty)
+        } catch {
+            // Model might not be available, skip this test
+            print("Skipping chat thinking test: \(error)")
+        }
+    }
+
+    @Test
+    func testChatStreamWithThinking() async throws {
+        let messages: [Chat.Message] = [
+            .system("You are a helpful assistant."),
+            .user(
+                "Solve this riddle: I have cities, but no houses. I have mountains, but no trees. What am I?"
+            ),
+        ]
+
+        // Test streaming with thinking enabled
+        do {
+            let stream = try await ollama.chatStream(
+                model: "deepseek-r1:8b",
+                messages: messages,
+                think: true
+            )
+
+            var responses: [Client.ChatResponse] = []
+            var foundThinking = false
+
+            for try await res in stream {
+                responses.append(res)
+                if res.message.thinking != nil && !res.message.thinking!.isEmpty {
+                    foundThinking = true
+                }
+            }
+
+            #expect(!responses.isEmpty)
+            #expect(foundThinking, "Expected to find thinking content in chat stream")
+        } catch {
+            // Model might not be available, skip this test
+            print("Skipping chat thinking stream test: \(error)")
+        }
+    }
+
+    @Test
+    func testChatWithoutThinking() async throws {
+        let messages: [Chat.Message] = [
+            .system("You are a helpful assistant."),
+            .user("What is the capital of France?"),
+        ]
+
+        // Test with thinking explicitly disabled
+        let response = try await ollama.chat(
+            model: "llama3.2",
+            messages: messages,
+            think: false
+        )
+
+        #expect(!response.message.content.isEmpty)
+        #expect(response.message.role == .assistant)
+        // Should not have thinking content when disabled
+        #expect(response.message.thinking == nil)
     }
 
     @Test

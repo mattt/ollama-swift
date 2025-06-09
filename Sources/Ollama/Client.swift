@@ -134,7 +134,7 @@ public final class Client: Sendable {
         }
     }
 
-    func fetchStream<T: Decodable>(
+    func fetchStream<T: Decodable & Sendable>(
         _ method: Method,
         _ path: String,
         params: [String: Value]? = nil

@@ -851,7 +851,7 @@ extension Client {
         public let modelfile: String
 
         /// The model parameters.
-        public let parameters: String
+        public let parameters: String?
 
         /// The prompt template used by the model.
         public let template: String

@@ -125,7 +125,7 @@ public enum Model {
     // MARK: -
 
     /// Represents additional information about a model.
-    public struct Details: Hashable, Decodable, Sendable {
+    public struct Details: Hashable, Codable, Sendable {
         /// The format of the model file (e.g., "gguf").
         public let format: String
 
@@ -150,6 +150,22 @@ public enum Model {
             case parameterSize = "parameter_size"
             case quantizationLevel = "quantization_level"
             case parentModel = "parent_model"
+        }
+
+        public init(
+            format: String,
+            family: String,
+            families: [String]? = nil,
+            parameterSize: String,
+            quantizationLevel: String,
+            parentModel: String? = nil
+        ) {
+            self.format = format
+            self.family = family
+            self.families = families
+            self.parameterSize = parameterSize
+            self.quantizationLevel = quantizationLevel
+            self.parentModel = parentModel
         }
     }
 

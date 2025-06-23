@@ -255,7 +255,7 @@ public final class Client: Sendable {
 // MARK: - Generate
 
 extension Client {
-    public struct GenerateResponse: Hashable, Decodable, Sendable {
+    public struct GenerateResponse: Hashable, Codable, Sendable {
         public let model: Model.ID
         public let createdAt: Date
         public let response: String
@@ -282,6 +282,34 @@ extension Client {
             case promptEvalDuration = "prompt_eval_duration"
             case evalCount = "eval_count"
             case evalDuration = "eval_duration"
+        }
+
+        public init(
+            model: Model.ID,
+            createdAt: Date,
+            response: String,
+            done: Bool,
+            context: [Int]? = nil,
+            thinking: String? = nil,
+            totalDuration: TimeInterval? = nil,
+            loadDuration: TimeInterval? = nil,
+            promptEvalCount: Int? = nil,
+            promptEvalDuration: TimeInterval? = nil,
+            evalCount: Int? = nil,
+            evalDuration: TimeInterval? = nil
+        ) {
+            self.model = model
+            self.createdAt = createdAt
+            self.response = response
+            self.done = done
+            self.context = context
+            self.thinking = thinking
+            self.totalDuration = totalDuration
+            self.loadDuration = loadDuration
+            self.promptEvalCount = promptEvalCount
+            self.promptEvalDuration = promptEvalDuration
+            self.evalCount = evalCount
+            self.evalDuration = evalDuration
         }
     }
 
@@ -430,7 +458,7 @@ extension Client {
 // MARK: - Chat
 
 extension Client {
-    public struct ChatResponse: Hashable, Decodable, Sendable {
+    public struct ChatResponse: Hashable, Codable, Sendable {
         public let model: Model.ID
         public let createdAt: Date
         public let message: Chat.Message
@@ -454,6 +482,30 @@ extension Client {
             case promptEvalDuration = "prompt_eval_duration"
             case evalCount = "eval_count"
             case evalDuration = "eval_duration"
+        }
+
+        public init(
+            model: Model.ID,
+            createdAt: Date,
+            message: Chat.Message,
+            done: Bool,
+            totalDuration: TimeInterval? = nil,
+            loadDuration: TimeInterval? = nil,
+            promptEvalCount: Int? = nil,
+            promptEvalDuration: TimeInterval? = nil,
+            evalCount: Int? = nil,
+            evalDuration: TimeInterval? = nil
+        ) {
+            self.model = model
+            self.createdAt = createdAt
+            self.message = message
+            self.done = done
+            self.totalDuration = totalDuration
+            self.loadDuration = loadDuration
+            self.promptEvalCount = promptEvalCount
+            self.promptEvalDuration = promptEvalDuration
+            self.evalCount = evalCount
+            self.evalDuration = evalDuration
         }
     }
 
@@ -662,8 +714,8 @@ extension Client {
 // MARK: - List Models
 
 extension Client {
-    public struct ListModelsResponse: Decodable, Sendable {
-        public struct Model: Decodable, Sendable {
+    public struct ListModelsResponse: Codable, Sendable {
+        public struct Model: Codable, Sendable {
             public let name: String
             public let modifiedAt: String
             public let size: Int64
@@ -677,9 +729,27 @@ extension Client {
                 case digest
                 case details
             }
+
+            public init(
+                name: String,
+                modifiedAt: String,
+                size: Int64,
+                digest: String,
+                details: Ollama.Model.Details
+            ) {
+                self.name = name
+                self.modifiedAt = modifiedAt
+                self.size = size
+                self.digest = digest
+                self.details = details
+            }
         }
 
         public let models: [Model]
+
+        public init(models: [Model]) {
+            self.models = models
+        }
     }
 
     /// Lists models that are available locally.
@@ -846,7 +916,7 @@ extension Client {
 
 extension Client {
     /// A response containing information about a model.
-    public struct ShowModelResponse: Decodable, Sendable {
+    public struct ShowModelResponse: Codable, Sendable {
         /// The contents of the Modelfile for the model.
         public let modelfile: String
 
@@ -872,6 +942,22 @@ extension Client {
             case details
             case info = "model_info"
             case capabilities
+        }
+
+        public init(
+            modelfile: String,
+            parameters: String?,
+            template: String,
+            details: Model.Details,
+            info: [String: Value],
+            capabilities: Set<Model.Capability>
+        ) {
+            self.modelfile = modelfile
+            self.parameters = parameters
+            self.template = template
+            self.details = details
+            self.info = info
+            self.capabilities = capabilities
         }
     }
 

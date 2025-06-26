@@ -152,6 +152,14 @@ public enum Model {
             case parentModel = "parent_model"
         }
 
+        /// Creates a model details object.
+        /// - Parameters:
+        ///   - format: The format of the model file (e.g., "gguf").
+        ///   - family: The primary family or architecture of the model (e.g., "llama").
+        ///   - families: Additional families or architectures the model belongs to, if any.
+        ///   - parameterSize: The parameter size of the model (e.g., "7B", "13B").
+        ///   - quantizationLevel: The quantization level of the model (e.g., "Q4_0").
+        ///   - parentModel: The parent model, if this model is derived from another.
         public init(
             format: String,
             family: String,

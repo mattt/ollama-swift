@@ -284,6 +284,20 @@ extension Client {
             case evalDuration = "eval_duration"
         }
 
+        /// Creates a generate response object.
+        /// - Parameters:
+        ///   - model: The model used for generation.
+        ///   - createdAt: The date and time the response was created.
+        ///   - response: The generated text response.
+        ///   - done: Whether the generation is complete.
+        ///   - context: The context of the generation.
+        ///   - thinking: The thinking of the generation.
+        ///   - totalDuration: The total duration of the generation.
+        ///   - loadDuration: The load duration of the generation.
+        ///   - promptEvalCount: The prompt evaluation count of the generation.
+        ///   - promptEvalDuration: The prompt evaluation duration of the generation.
+        ///   - evalCount: The evaluation count of the generation.
+        ///   - evalDuration: The evaluation duration of the generation.
         public init(
             model: Model.ID,
             createdAt: Date,

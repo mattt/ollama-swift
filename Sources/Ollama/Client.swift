@@ -819,14 +819,23 @@ extension Client {
 // MARK: - List Running Models
 
 extension Client {
+    /// Represents a response containing information about running models.
     public struct ListRunningModelsResponse: Decodable, Sendable {
+        /// Represents a running model.
         public struct Model: Decodable, Sendable {
+            /// The name of the model.
             public let name: String
+            /// The model of the running model.
             public let model: String
+            /// The size of the running model.
             public let size: Int64
+            /// The digest of the running model.
             public let digest: String
+            /// The details of the running model.
             public let details: Ollama.Model.Details
+            /// The date and time the running model expires.
             public let expiresAt: String
+            /// The size of the running model in VRAM.
             public let sizeVRAM: Int64
 
             private enum CodingKeys: String, CodingKey {
@@ -840,6 +849,7 @@ extension Client {
             }
         }
 
+        /// The models in the response.
         public let models: [Model]
     }
 
@@ -999,6 +1009,14 @@ extension Client {
             case capabilities
         }
 
+        /// Creates a show model response object.
+        /// - Parameters:
+        ///   - modelfile: The contents of the Modelfile for the model.
+        ///   - parameters: The model parameters.
+        ///   - template: The prompt template used by the model.
+        ///   - details: Detailed information about the model.
+        ///   - info: Additional model information.
+        ///   - capabilities: The capabilities of the model.
         public init(
             modelfile: String,
             parameters: String?,

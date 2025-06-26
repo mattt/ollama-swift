@@ -751,12 +751,19 @@ extension Client {
 // MARK: - List Models
 
 extension Client {
+    /// Represents a response containing information about available models.
     public struct ListModelsResponse: Codable, Sendable {
+        /// Represents a model.
         public struct Model: Codable, Sendable {
+            /// The name of the model.
             public let name: String
+            /// The date and time the model was modified.
             public let modifiedAt: String
+            /// The size of the model.
             public let size: Int64
+            /// The digest of the model.
             public let digest: String
+            /// The details of the model.
             public let details: Ollama.Model.Details
 
             private enum CodingKeys: String, CodingKey {
@@ -767,6 +774,13 @@ extension Client {
                 case details
             }
 
+            /// Creates a model object.
+            /// - Parameters:
+            ///   - name: The name of the model.
+            ///   - modifiedAt: The date and time the model was modified.
+            ///   - size: The size of the model.
+            ///   - digest: The digest of the model.
+            ///   - details: The details of the model.
             public init(
                 name: String,
                 modifiedAt: String,
@@ -782,8 +796,12 @@ extension Client {
             }
         }
 
+        /// The models in the response.
         public let models: [Model]
 
+        /// Creates a list models response object.
+        /// - Parameters:
+        ///   - models: The models in the response.
         public init(models: [Model]) {
             self.models = models
         }

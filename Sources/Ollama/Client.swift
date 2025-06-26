@@ -255,7 +255,7 @@ public final class Client: Sendable {
 // MARK: - Generate
 
 extension Client {
-    public struct GenerateResponse: Hashable, Decodable, Sendable {
+    public struct GenerateResponse: Hashable, Codable, Sendable {
         public let model: Model.ID
         public let createdAt: Date
         public let response: String
@@ -282,6 +282,48 @@ extension Client {
             case promptEvalDuration = "prompt_eval_duration"
             case evalCount = "eval_count"
             case evalDuration = "eval_duration"
+        }
+
+        /// Creates a generate response object.
+        /// - Parameters:
+        ///   - model: The model used for generation.
+        ///   - createdAt: The date and time the response was created.
+        ///   - response: The generated text response.
+        ///   - done: Whether the generation is complete.
+        ///   - context: The context of the generation.
+        ///   - thinking: The thinking of the generation.
+        ///   - totalDuration: The total duration of the generation.
+        ///   - loadDuration: The load duration of the generation.
+        ///   - promptEvalCount: The prompt evaluation count of the generation.
+        ///   - promptEvalDuration: The prompt evaluation duration of the generation.
+        ///   - evalCount: The evaluation count of the generation.
+        ///   - evalDuration: The evaluation duration of the generation.
+        public init(
+            model: Model.ID,
+            createdAt: Date,
+            response: String,
+            done: Bool,
+            context: [Int]? = nil,
+            thinking: String? = nil,
+            totalDuration: TimeInterval? = nil,
+            loadDuration: TimeInterval? = nil,
+            promptEvalCount: Int? = nil,
+            promptEvalDuration: TimeInterval? = nil,
+            evalCount: Int? = nil,
+            evalDuration: TimeInterval? = nil
+        ) {
+            self.model = model
+            self.createdAt = createdAt
+            self.response = response
+            self.done = done
+            self.context = context
+            self.thinking = thinking
+            self.totalDuration = totalDuration
+            self.loadDuration = loadDuration
+            self.promptEvalCount = promptEvalCount
+            self.promptEvalDuration = promptEvalDuration
+            self.evalCount = evalCount
+            self.evalDuration = evalDuration
         }
     }
 
@@ -430,17 +472,28 @@ extension Client {
 // MARK: - Chat
 
 extension Client {
-    public struct ChatResponse: Hashable, Decodable, Sendable {
+    /// Represents a chat response from the model.
+    public struct ChatResponse: Hashable, Codable, Sendable {
+        /// The model used for the chat.
         public let model: Model.ID
+        /// The date and time the response was created.
         public let createdAt: Date
+        /// The message of the chat.
         public let message: Chat.Message
+        /// Whether the chat is complete.
         public let done: Bool
 
+        /// The total duration of the chat.
         public let totalDuration: TimeInterval?
+        /// The load duration of the chat.
         public let loadDuration: TimeInterval?
+        /// The prompt evaluation count of the chat.
         public let promptEvalCount: Int?
+        /// The prompt evaluation duration of the chat.
         public let promptEvalDuration: TimeInterval?
+        /// The evaluation count of the chat.
         public let evalCount: Int?
+        /// The evaluation duration of the chat.
         public let evalDuration: TimeInterval?
 
         private enum CodingKeys: String, CodingKey {
@@ -454,6 +507,42 @@ extension Client {
             case promptEvalDuration = "prompt_eval_duration"
             case evalCount = "eval_count"
             case evalDuration = "eval_duration"
+        }
+
+        /// Creates a chat response object.
+        /// - Parameters:
+        ///   - model: The model used for the chat.
+        ///   - createdAt: The date and time the response was created.
+        ///   - message: The message of the chat.
+        ///   - done: Whether the chat is complete.
+        ///   - totalDuration: The total duration of the chat.
+        ///   - loadDuration: The load duration of the chat.
+        ///   - promptEvalCount: The prompt evaluation count of the chat.
+        ///   - promptEvalDuration: The prompt evaluation duration of the chat.
+        ///   - evalCount: The evaluation count of the chat.
+        ///   - evalDuration: The evaluation duration of the chat.
+        public init(
+            model: Model.ID,
+            createdAt: Date,
+            message: Chat.Message,
+            done: Bool,
+            totalDuration: TimeInterval? = nil,
+            loadDuration: TimeInterval? = nil,
+            promptEvalCount: Int? = nil,
+            promptEvalDuration: TimeInterval? = nil,
+            evalCount: Int? = nil,
+            evalDuration: TimeInterval? = nil
+        ) {
+            self.model = model
+            self.createdAt = createdAt
+            self.message = message
+            self.done = done
+            self.totalDuration = totalDuration
+            self.loadDuration = loadDuration
+            self.promptEvalCount = promptEvalCount
+            self.promptEvalDuration = promptEvalDuration
+            self.evalCount = evalCount
+            self.evalDuration = evalDuration
         }
     }
 
@@ -662,12 +751,19 @@ extension Client {
 // MARK: - List Models
 
 extension Client {
-    public struct ListModelsResponse: Decodable, Sendable {
-        public struct Model: Decodable, Sendable {
+    /// Represents a response containing information about available models.
+    public struct ListModelsResponse: Codable, Sendable {
+        /// Represents a model.
+        public struct Model: Codable, Sendable {
+            /// The name of the model.
             public let name: String
+            /// The date and time the model was modified.
             public let modifiedAt: String
+            /// The size of the model.
             public let size: Int64
+            /// The digest of the model.
             public let digest: String
+            /// The details of the model.
             public let details: Ollama.Model.Details
 
             private enum CodingKeys: String, CodingKey {
@@ -677,9 +773,38 @@ extension Client {
                 case digest
                 case details
             }
+
+            /// Creates a model object.
+            /// - Parameters:
+            ///   - name: The name of the model.
+            ///   - modifiedAt: The date and time the model was modified.
+            ///   - size: The size of the model.
+            ///   - digest: The digest of the model.
+            ///   - details: The details of the model.
+            public init(
+                name: String,
+                modifiedAt: String,
+                size: Int64,
+                digest: String,
+                details: Ollama.Model.Details
+            ) {
+                self.name = name
+                self.modifiedAt = modifiedAt
+                self.size = size
+                self.digest = digest
+                self.details = details
+            }
         }
 
+        /// The models in the response.
         public let models: [Model]
+
+        /// Creates a list models response object.
+        /// - Parameters:
+        ///   - models: The models in the response.
+        public init(models: [Model]) {
+            self.models = models
+        }
     }
 
     /// Lists models that are available locally.
@@ -694,14 +819,23 @@ extension Client {
 // MARK: - List Running Models
 
 extension Client {
+    /// Represents a response containing information about running models.
     public struct ListRunningModelsResponse: Decodable, Sendable {
+        /// Represents a running model.
         public struct Model: Decodable, Sendable {
+            /// The name of the model.
             public let name: String
+            /// The model of the running model.
             public let model: String
+            /// The size of the running model.
             public let size: Int64
+            /// The digest of the running model.
             public let digest: String
+            /// The details of the running model.
             public let details: Ollama.Model.Details
+            /// The date and time the running model expires.
             public let expiresAt: String
+            /// The size of the running model in VRAM.
             public let sizeVRAM: Int64
 
             private enum CodingKeys: String, CodingKey {
@@ -715,6 +849,7 @@ extension Client {
             }
         }
 
+        /// The models in the response.
         public let models: [Model]
     }
 
@@ -846,7 +981,7 @@ extension Client {
 
 extension Client {
     /// A response containing information about a model.
-    public struct ShowModelResponse: Decodable, Sendable {
+    public struct ShowModelResponse: Codable, Sendable {
         /// The contents of the Modelfile for the model.
         public let modelfile: String
 
@@ -872,6 +1007,30 @@ extension Client {
             case details
             case info = "model_info"
             case capabilities
+        }
+
+        /// Creates a show model response object.
+        /// - Parameters:
+        ///   - modelfile: The contents of the Modelfile for the model.
+        ///   - parameters: The model parameters.
+        ///   - template: The prompt template used by the model.
+        ///   - details: Detailed information about the model.
+        ///   - info: Additional model information.
+        ///   - capabilities: The capabilities of the model.
+        public init(
+            modelfile: String,
+            parameters: String?,
+            template: String,
+            details: Model.Details,
+            info: [String: Value],
+            capabilities: Set<Model.Capability>
+        ) {
+            self.modelfile = modelfile
+            self.parameters = parameters
+            self.template = template
+            self.details = details
+            self.info = info
+            self.capabilities = capabilities
         }
     }
 

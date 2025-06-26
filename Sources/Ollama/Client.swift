@@ -472,17 +472,28 @@ extension Client {
 // MARK: - Chat
 
 extension Client {
+    /// Represents a chat response from the model.
     public struct ChatResponse: Hashable, Codable, Sendable {
+        /// The model used for the chat.
         public let model: Model.ID
+        /// The date and time the response was created.
         public let createdAt: Date
+        /// The message of the chat.
         public let message: Chat.Message
+        /// Whether the chat is complete.
         public let done: Bool
 
+        /// The total duration of the chat.
         public let totalDuration: TimeInterval?
+        /// The load duration of the chat.
         public let loadDuration: TimeInterval?
+        /// The prompt evaluation count of the chat.
         public let promptEvalCount: Int?
+        /// The prompt evaluation duration of the chat.
         public let promptEvalDuration: TimeInterval?
+        /// The evaluation count of the chat.
         public let evalCount: Int?
+        /// The evaluation duration of the chat.
         public let evalDuration: TimeInterval?
 
         private enum CodingKeys: String, CodingKey {
@@ -498,6 +509,18 @@ extension Client {
             case evalDuration = "eval_duration"
         }
 
+        /// Creates a chat response object.
+        /// - Parameters:
+        ///   - model: The model used for the chat.
+        ///   - createdAt: The date and time the response was created.
+        ///   - message: The message of the chat.
+        ///   - done: Whether the chat is complete.
+        ///   - totalDuration: The total duration of the chat.
+        ///   - loadDuration: The load duration of the chat.
+        ///   - promptEvalCount: The prompt evaluation count of the chat.
+        ///   - promptEvalDuration: The prompt evaluation duration of the chat.
+        ///   - evalCount: The evaluation count of the chat.
+        ///   - evalDuration: The evaluation duration of the chat.
         public init(
             model: Model.ID,
             createdAt: Date,

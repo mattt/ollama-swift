@@ -16,7 +16,7 @@ A Swift client library for interacting with the
 Add the following to your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/loopwork-ai/ollama-swift.git", from: "1.8.0")
+.package(url: "https://github.com/loopwork/ollama-swift.git", from: "1.8.0")
 ```
 
 ## Usage
@@ -226,7 +226,7 @@ The format parameter works with both `chat` and `generate` methods.
 ### Using Thinking Models
 
 Some models support a "thinking" mode
-where they show their reasoning process before providing the final answer. 
+where they show their reasoning process before providing the final answer.
 This is particularly useful for complex reasoning tasks.
 
 ```swift
@@ -317,7 +317,7 @@ let response = try await client.generate(
 - **`.default`** - Use the server's default keep-alive behavior (default if not specified)
 - **`.none`** - Unload immediately after the request
 - **`.seconds(Int)`** - Keep loaded for the specified number of seconds
-- **`.minutes(Int)`** - Keep loaded for the specified number of minutes  
+- **`.minutes(Int)`** - Keep loaded for the specified number of minutes
 - **`.hours(Int)`** - Keep loaded for the specified number of hours
 - **`.forever`** - Keep loaded indefinitely
 
@@ -369,13 +369,13 @@ let weatherTool = Tool<WeatherInput, WeatherOutput>(
 ```
 
 > [!IMPORTANT]
-> In version 1.3.0 and later, 
-> the `parameters` argument should contain only the properties object, 
-> not the full JSON schema of the tool. 
-> 
-> For backward compatibility, 
-> passing a full schema in the `parameters` argument 
-> (with `"type"`, `"properties"`, and `"required"` fields) 
+> In version 1.3.0 and later,
+> the `parameters` argument should contain only the properties object,
+> not the full JSON schema of the tool.
+>
+> For backward compatibility,
+> passing a full schema in the `parameters` argument
+> (with `"type"`, `"properties"`, and `"required"` fields)
 > is still supported but deprecated and will emit a warning in debug builds.
 >
 > <details>

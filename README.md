@@ -16,7 +16,7 @@ A Swift client library for interacting with the
 Add the following to your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/loopwork/ollama-swift.git", from: "1.8.0")
+.package(url: "https://github.com/mattt/ollama-swift.git", from: "1.8.0")
 ```
 
 ## Usage

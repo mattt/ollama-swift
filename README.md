@@ -598,3 +598,8 @@ do {
     print("Error: \(error)")
 }
 ```
+
+## License
+
+This project is available under the MIT license.
+See the LICENSE file for more info.

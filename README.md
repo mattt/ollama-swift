@@ -42,6 +42,31 @@ let client = Client.default
 let customClient = Client(host: URL(string: "http://your-ollama-host:11434")!, userAgent: "MyApp/1.0")
 ```
 
+#### Using with llmman
+
+[llmman](https://github.com/llmmanorg/llmman) is a local model runner that
+serves the Ollama API (alongside OpenAI- and Anthropic-compatible ones)
+on port 17434.
+Point the client at it by passing its host URL:
+
+```swift
+import Ollama
+
+// llmman listens on http://localhost:17434 by default (override with LLMMAN_HOST)
+let client = Client(host: URL(string: "http://localhost:17434")!)
+
+let response = try await client.chat(
+    model: "gemma4",
+    messages: [.user("In which city is Apple Inc. located?")]
+)
+print(response.message.content)
+```
+
+Text generation, chat (including tools, images, and structured outputs),
+and model management work as with Ollama.
+llmman does not serve `/api/embed`, so `embed(...)` is not available;
+use its OpenAI-compatible `/v1/embeddings` endpoint for embeddings instead.
+
 ### Generating text
 
 Generate text using a specified model:

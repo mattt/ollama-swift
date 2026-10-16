@@ -117,6 +117,55 @@ struct ClientTests {
     }
 
     @Test
+    func testSystemOne() async throws {
+        let response = try await ollama.systemOne(
+            model: "nimble",
+            state: "Our checkout has returned 500 errors since 9am.",
+            questions: [
+                "label": .choice(
+                    instructions: "Which label fits this ticket?",
+                    criteria: [
+                        "billing": "Payments and refunds",
+                        "bug": "Software errors",
+                        "account": "Login and account access",
+                    ]
+                ),
+                "refund": .noul(instructions: "Is the customer requesting a refund?"),
+                "urgency": .score(
+                    instructions: "How urgently does this ticket need a response?",
+                    criteria: [
+                        "Routine: no time pressure",
+                        "Soon: a customer is inconvenienced",
+                        "Immediate: a critical service is unavailable",
+                    ]
+                ),
+            ]
+        )
+
+        #expect(response.model == "nimble")
+        #expect(response.usage.inputTokens > 0)
+
+        guard case .choice(let choice, let probabilities, _) = response.answers["label"] else {
+            Issue.record("Missing or invalid choice answer")
+            return
+        }
+        #expect(probabilities.keys.contains(choice))
+
+        guard case .noul(let probability) = response.answers["refund"] else {
+            Issue.record("Missing or invalid noul answer")
+            return
+        }
+        #expect((0...1).contains(probability))
+
+        guard case .score(let score, let legend, _, _) = response.answers["urgency"] else {
+            Issue.record("Missing or invalid score answer")
+            return
+        }
+        #expect((0...2).contains(score))
+        #expect(legend.count == 3)
+    }
+
+    @Test
     func testListModels() async throws {
         let response = try await ollama.listModels()
 

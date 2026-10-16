@@ -7,7 +7,7 @@ import Foundation
 /// An Ollama HTTP API client.
 ///
 /// This client provides methods to interact with the Ollama API,
-/// allowing you to generate text, chat, create embeddings, and manage models.
+/// allowing you to generate text, chat, create embeddings, answer decision questions, and manage models.
 ///
 /// - SeeAlso: [Ollama API Documentation](https://github.com/ollama/ollama/blob/main/docs/api.md)
 @MainActor
@@ -745,6 +745,105 @@ extension Client {
         }
 
         return try await fetch(.post, "/api/embed", params: params)
+    }
+}
+
+// MARK: - System One
+
+extension Client {
+    /// Represents a System One response from the model.
+    public struct SystemOneResponse: Hashable, Codable, Sendable {
+        /// The token usage for a System One request.
+        public struct Usage: Hashable, Codable, Sendable {
+            /// The total evaluated input tokens, including image positions.
+            ///
+            /// Shared context is counted again when the model scores questions separately.
+            public let inputTokens: Int
+
+            /// The tokens generated internally for scoring.
+            ///
+            /// This count includes prefix preparation and retries.
+            /// It may exceed the question count,
+            /// and it is not the length of the JSON response.
+            public let outputTokens: Int
+
+            private enum CodingKeys: String, CodingKey {
+                case inputTokens = "input_tokens"
+                case outputTokens = "output_tokens"
+            }
+
+            /// Creates a token usage object.
+            ///
+            /// - Parameters:
+            ///   - inputTokens: The total evaluated input tokens.
+            ///   - outputTokens: The tokens generated internally for scoring.
+            public init(inputTokens: Int, outputTokens: Int) {
+                self.inputTokens = inputTokens
+                self.outputTokens = outputTokens
+            }
+        }
+
+        /// The model used for the request.
+        public let model: Model.ID
+
+        /// The answers, keyed by the question names in the request.
+        public let answers: [String: SystemOne.Answer]
+
+        /// The token usage for the request.
+        public let usage: Usage
+
+        /// Creates a System One response object.
+        ///
+        /// - Parameters:
+        ///   - model: The model used for the request.
+        ///   - answers: The answers, keyed by the question names in the request.
+        ///   - usage: The token usage for the request.
+        public init(model: Model.ID, answers: [String: SystemOne.Answer], usage: Usage) {
+            self.model = model
+            self.answers = answers
+            self.usage = usage
+        }
+    }
+
+    /// Answers choice, yes/no, and scoring questions about a state with a System One model.
+    ///
+    /// System One requires Ollama v0.35.0 or later,
+    /// or v0.40.5 or later for cloud models.
+    /// It returns one JSON response.
+    /// Streaming, video, tools, and generation controls are not supported.
+    ///
+    /// - Parameters:
+    ///   - model: The name of a model trained for System One, such as `nimble`.
+    ///   - state: The state that every question is about.
+    ///   - questions: The named questions about the state.
+    ///     Answers are not passed to later questions.
+    ///   - images: Optional list of images shared by all questions, in request order.
+    ///     Images require a model with vision, such as Clef.
+    ///   - keepAlive: Controls how long the model will stay loaded into memory following the request. Defaults to `.default` which uses the server's default (typically 5 minutes).
+    /// - Returns: A `SystemOneResponse` containing the answers and token usage.
+    /// - Throws: An error if the request fails or the response cannot be decoded.
+    public func systemOne(
+        model: Model.ID,
+        state: SystemOne.Content,
+        questions: [String: SystemOne.Question],
+        images: [Data]? = nil,
+        keepAlive: KeepAlive = .default
+    ) async throws -> SystemOneResponse {
+        var params: [String: Value] = [
+            "model": .string(model.rawValue),
+            "state": try Value(state),
+            "questions": try Value(questions),
+        ]
+
+        if let images {
+            params["images"] = .array(images.map { .string($0.base64EncodedString()) })
+        }
+
+        if let keepAliveValue = keepAlive.value {
+            params["keep_alive"] = keepAliveValue
+        }
+
+        return try await fetch(.post, "/v1/systemone", params: params)
     }
 }
 

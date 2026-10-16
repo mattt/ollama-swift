@@ -535,6 +535,54 @@ do {
 }
 ```
 
+### Deciding with System One
+
+System One answers choice, yes/no, and scoring questions about a state
+with a model trained for decisions, such as Nimble.
+It requires Ollama v0.35.0 or later (v0.40.5 or later for cloud models).
+
+```swift
+do {
+    let response = try await client.systemOne(
+        model: "nimble",
+        state: "Our checkout has returned 500 errors since 9am.",
+        questions: [
+            "label": .choice(
+                instructions: "Which label fits this ticket?",
+                criteria: [
+                    "billing": "Payments and refunds",
+                    "bug": "Software errors",
+                    "account": "Login and account access"
+                ]
+            ),
+            "refund": .noul(
+                instructions: "Is the customer requesting a refund?"
+            ),
+            "urgency": .score(
+                instructions: "How urgently does this ticket need a response?",
+                criteria: [
+                    "Routine: no time pressure",
+                    "Soon: a customer is inconvenienced",
+                    "Immediate: a critical service is unavailable"
+                ]
+            )
+        ]
+    )
+
+    if case .choice(let choice, _, let confidence) = response.answers["label"] {
+        print("Label: \(choice) (confidence: \(confidence))")
+    }
+    if case .noul(let probability) = response.answers["refund"] {
+        print("Probability of a refund request: \(probability)")
+    }
+    if case .score(let score, _, _, _) = response.answers["urgency"] {
+        print("Urgency: \(score) / 2")
+    }
+} catch {
+    print("Error: \(error)")
+}
+```
+
 ### Managing models
 
 #### Listing models

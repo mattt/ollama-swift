@@ -23,7 +23,12 @@ public enum Model {
         /// The raw string representation of the model identifier.
         public typealias RawValue = String
 
-        // MARK: Equatable & Comparable
+        // MARK: Hashable, Equatable & Comparable
+
+        /// Hashes the identifier using the same case-insensitive semantics as equality.
+        public func hash(into hasher: inout Hasher) {
+            hasher.combine(rawValue.folding(options: .caseInsensitive, locale: nil))
+        }
 
         /// Compares two `Model.ID` instances for equality.
         /// The comparison is case-insensitive.

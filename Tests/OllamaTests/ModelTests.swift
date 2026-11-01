@@ -91,6 +91,50 @@ struct ModelTests {
         }
         
         @Test
+        func testCaseInsensitiveModelIDHashing() throws {
+            let pairs = [
+                ("llama3.1:70b", "LLAMA3.1:70B"),
+                ("org/llama3.1:70b", "ORG/LLAMA3.1:70B"),
+                ("mistral", "MISTRAL"),
+                ("straße:latest", "STRASSE:LATEST"),
+                ("Σ:tag", "ς:TAG"),
+                ("é:tag", "E\u{301}:TAG"),
+            ]
+
+            for (raw, equivalentRaw) in pairs {
+                let model = try #require(Model.ID(rawValue: raw))
+                let equivalent = try #require(Model.ID(rawValue: equivalentRaw))
+                #expect(model == equivalent)
+                #expect(model.hashValue == equivalent.hashValue)
+
+                var models: Set<Model.ID> = [model]
+                #expect(models.contains(equivalent))
+                #expect(!models.insert(equivalent).inserted)
+                #expect(models.count == 1)
+
+                var configured = [model: "first"]
+                #expect(configured[equivalent] == "first")
+                configured[equivalent] = "updated"
+                #expect(configured.count == 1)
+                #expect(configured[model] == "updated")
+            }
+        }
+
+        @Test
+        func testModelIDHashingPreservesRepresentationAndDistinctIDs() throws {
+            let model: Model.ID = "ORG/Llama3:TAG"
+            let encoded = try JSONEncoder().encode(model)
+            #expect(model.rawValue == "ORG/Llama3:TAG")
+            #expect(model.description == "ORG/Llama3:TAG")
+            #expect(try JSONDecoder().decode(String.self, from: encoded) == model.rawValue)
+            let decoded = try JSONDecoder().decode(Model.ID.self, from: encoded)
+            #expect(decoded.rawValue == model.rawValue)
+
+            let models: Set<Model.ID> = [model, "other/Llama3:TAG", "ORG/Llama2:TAG", "ORG/Llama3:other"]
+            #expect(models.count == 4)
+        }
+
+        @Test
         func testModelIDComparison() throws {
             // Test with real Ollama models
             let codellama: Model.ID = "codellama:7b"

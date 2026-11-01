@@ -48,18 +48,19 @@ public enum Model {
         /// The raw value should be in the format `"[namespace/]model[:tag]"`.
         public init?(rawValue: RawValue) {
             let components = rawValue.split(separator: "/", maxSplits: 1)
+            let modelAndTag: [Substring]
 
             if components.count == 2 {
                 self.namespace = String(components[0])
-                let modelAndTag = components[1].split(separator: ":", maxSplits: 1)
-                self.model = String(modelAndTag[0])
-                self.tag = modelAndTag.count > 1 ? String(modelAndTag[1]) : nil
+                modelAndTag = components[1].split(separator: ":", maxSplits: 1)
             } else {
                 self.namespace = nil
-                let modelAndTag = rawValue.split(separator: ":", maxSplits: 1)
-                self.model = String(modelAndTag[0])
-                self.tag = modelAndTag.count > 1 ? String(modelAndTag[1]) : nil
+                modelAndTag = rawValue.split(separator: ":", maxSplits: 1)
             }
+
+            guard let model = modelAndTag.first else { return nil }
+            self.model = String(model)
+            self.tag = modelAndTag.count > 1 ? String(modelAndTag[1]) : nil
         }
 
         /// Returns the raw string representation of the `Model.ID`.

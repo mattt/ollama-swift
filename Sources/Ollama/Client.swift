@@ -187,6 +187,11 @@ public final class Client: Sendable {
                         }
                     }
 
+                    if !buffer.isEmpty {
+                        let decoded = try decoder.decode(T.self, from: buffer)
+                        continuation.yield(decoded)
+                    }
+
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)

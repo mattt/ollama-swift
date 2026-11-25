@@ -67,6 +67,21 @@ struct StreamingResponseTests {
         }
     }
 
+    @Test(arguments: ["stream-error", "stream-error-eof"])
+    func reportsProviderErrorAfterPartialResponse(mode: String) async {
+        for chat in [false, true] {
+            do {
+                _ = try await responses(mode: mode, chat: chat)
+                Issue.record("Expected the streamed provider error")
+            } catch Client.Error.responseError(let response, let detail) {
+                #expect(response.statusCode == 200)
+                #expect(detail == "fixture failure")
+            } catch {
+                Issue.record("Unexpected error: \(error)")
+            }
+        }
+    }
+
     private func responses(mode: String, chat: Bool) async throws -> (
         text: [String], done: [Bool], counts: [Int?]
     ) {
@@ -125,6 +140,8 @@ private final class StreamingFixtureProtocol: URLProtocol, @unchecked Sendable {
         case "single": body = last
         case "empty": body = ""
         case "http-error": body = #"{"error":"fixture failure"}"#
+        case "stream-error", "stream-error-eof":
+            body = first + "\n" + #"{"error":"fixture failure"}"# + (mode == "stream-error" ? "\n" : "")
         case "bad-tail": body = first + "\n{broken}"
         case "bad-line": body = "{broken}\n"
         default: body = first + "\n" + last

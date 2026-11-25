@@ -170,6 +170,17 @@ public final class Client: Sendable {
                             response: httpResponse, detail: "Invalid response")
                     }
 
+                    func decode(_ chunk: Data) throws -> T {
+                        do {
+                            return try decoder.decode(T.self, from: chunk)
+                        } catch {
+                            if let failure = try? decoder.decode(ErrorResponse.self, from: chunk) {
+                                throw Error.responseError(response: httpResponse, detail: failure.error)
+                            }
+                            throw error
+                        }
+                    }
+
                     var buffer = Data()
 
                     for try await byte in bytes {
@@ -181,14 +192,14 @@ public final class Client: Sendable {
                             buffer = buffer[buffer.index(after: newlineIndex)...]
 
                             if !chunk.isEmpty {
-                                let decoded = try decoder.decode(T.self, from: chunk)
+                                let decoded = try decode(chunk)
                                 continuation.yield(decoded)
                             }
                         }
                     }
 
                     if !buffer.isEmpty {
-                        let decoded = try decoder.decode(T.self, from: buffer)
+                        let decoded = try decode(buffer)
                         continuation.yield(decoded)
                     }
 

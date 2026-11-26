@@ -281,6 +281,8 @@ extension Client {
         public let totalDuration: TimeInterval?
         public let loadDuration: TimeInterval?
         public let promptEvalCount: Int?
+        /// The number of prompt tokens read from the cache, if reported by the server.
+        public let promptEvalCachedCount: Int?
         public let promptEvalDuration: TimeInterval?
         public let evalCount: Int?
         public let evalDuration: TimeInterval?
@@ -295,6 +297,7 @@ extension Client {
             case totalDuration = "total_duration"
             case loadDuration = "load_duration"
             case promptEvalCount = "prompt_eval_count"
+            case promptEvalCachedCount = "prompt_eval_cached_count"
             case promptEvalDuration = "prompt_eval_duration"
             case evalCount = "eval_count"
             case evalDuration = "eval_duration"
@@ -314,6 +317,7 @@ extension Client {
         ///   - promptEvalDuration: The prompt evaluation duration of the generation.
         ///   - evalCount: The evaluation count of the generation.
         ///   - evalDuration: The evaluation duration of the generation.
+        ///   - promptEvalCachedCount: The number of prompt tokens read from the cache.
         public init(
             model: Model.ID,
             createdAt: Date,
@@ -326,7 +330,8 @@ extension Client {
             promptEvalCount: Int? = nil,
             promptEvalDuration: TimeInterval? = nil,
             evalCount: Int? = nil,
-            evalDuration: TimeInterval? = nil
+            evalDuration: TimeInterval? = nil,
+            promptEvalCachedCount: Int? = nil
         ) {
             self.model = model
             self.createdAt = createdAt
@@ -340,6 +345,7 @@ extension Client {
             self.promptEvalDuration = promptEvalDuration
             self.evalCount = evalCount
             self.evalDuration = evalDuration
+            self.promptEvalCachedCount = promptEvalCachedCount
         }
     }
 
@@ -505,6 +511,8 @@ extension Client {
         public let loadDuration: TimeInterval?
         /// The prompt evaluation count of the chat.
         public let promptEvalCount: Int?
+        /// The number of prompt tokens read from the cache, if reported by the server.
+        public let promptEvalCachedCount: Int?
         /// The prompt evaluation duration of the chat.
         public let promptEvalDuration: TimeInterval?
         /// The evaluation count of the chat.
@@ -520,6 +528,7 @@ extension Client {
             case totalDuration = "total_duration"
             case loadDuration = "load_duration"
             case promptEvalCount = "prompt_eval_count"
+            case promptEvalCachedCount = "prompt_eval_cached_count"
             case promptEvalDuration = "prompt_eval_duration"
             case evalCount = "eval_count"
             case evalDuration = "eval_duration"
@@ -537,6 +546,7 @@ extension Client {
         ///   - promptEvalDuration: The prompt evaluation duration of the chat.
         ///   - evalCount: The evaluation count of the chat.
         ///   - evalDuration: The evaluation duration of the chat.
+        ///   - promptEvalCachedCount: The number of prompt tokens read from the cache.
         public init(
             model: Model.ID,
             createdAt: Date,
@@ -547,7 +557,8 @@ extension Client {
             promptEvalCount: Int? = nil,
             promptEvalDuration: TimeInterval? = nil,
             evalCount: Int? = nil,
-            evalDuration: TimeInterval? = nil
+            evalDuration: TimeInterval? = nil,
+            promptEvalCachedCount: Int? = nil
         ) {
             self.model = model
             self.createdAt = createdAt
@@ -559,6 +570,7 @@ extension Client {
             self.promptEvalDuration = promptEvalDuration
             self.evalCount = evalCount
             self.evalDuration = evalDuration
+            self.promptEvalCachedCount = promptEvalCachedCount
         }
     }
 

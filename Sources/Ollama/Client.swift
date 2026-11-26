@@ -880,6 +880,9 @@ extension Client {
             public let digest: String
             /// The details of the model.
             public let details: Ollama.Model.Details
+            /// The capabilities of the model (e.g., `"completion"`, `"tools"`),
+            /// or `nil` if the server did not report them.
+            public let capabilities: Set<Ollama.Model.Capability>?
 
             private enum CodingKeys: String, CodingKey {
                 case name
@@ -887,6 +890,7 @@ extension Client {
                 case size
                 case digest
                 case details
+                case capabilities
             }
 
             /// Creates a model object.
@@ -896,18 +900,21 @@ extension Client {
             ///   - size: The size of the model.
             ///   - digest: The digest of the model.
             ///   - details: The details of the model.
+            ///   - capabilities: The capabilities of the model.
             public init(
                 name: String,
                 modifiedAt: String,
                 size: Int64,
                 digest: String,
-                details: Ollama.Model.Details
+                details: Ollama.Model.Details,
+                capabilities: Set<Ollama.Model.Capability>? = nil
             ) {
                 self.name = name
                 self.modifiedAt = modifiedAt
                 self.size = size
                 self.digest = digest
                 self.details = details
+                self.capabilities = capabilities
             }
         }
 
@@ -952,6 +959,9 @@ extension Client {
             public let expiresAt: String
             /// The size of the running model in VRAM.
             public let sizeVRAM: Int64
+            /// The context length the model was loaded with,
+            /// or `nil` if the server did not report it.
+            public let contextLength: Int?
 
             private enum CodingKeys: String, CodingKey {
                 case name
@@ -961,6 +971,7 @@ extension Client {
                 case details
                 case expiresAt = "expires_at"
                 case sizeVRAM = "size_vram"
+                case contextLength = "context_length"
             }
         }
 

@@ -37,10 +37,17 @@ public enum Chat {
                 }
             }
 
+            /// The identifier of the tool call, if provided by the server.
+            ///
+            /// Pass this back as `toolCallID` on the matching ``Chat/Message/tool(_:toolName:toolCallID:)``
+            /// message so the model can associate the result with the call.
+            public let id: String?
+
             /// The function to be called
             public let function: Function
 
-            public init(function: Function) {
+            public init(id: String? = nil, function: Function) {
+                self.id = id
                 self.function = function
             }
         }
@@ -60,6 +67,12 @@ public enum Chat {
         /// The thinking process of the assistant when thinking is enabled
         public let thinking: String?
 
+        /// The name of the tool that produced this message (for `tool` messages).
+        public let toolName: String?
+
+        /// The identifier of the tool call this message responds to (for `tool` messages).
+        public let toolCallID: String?
+
         /// Creates a new chat message.
         ///
         /// - Parameters:
@@ -68,18 +81,24 @@ public enum Chat {
         ///   - images: Optional array of image data associated with the message.
         ///   - toolCalls: Optional array of tool calls associated with the message.
         ///   - thinking: The thinking process of the assistant when thinking is enabled.
+        ///   - toolName: The name of the tool that produced this message.
+        ///   - toolCallID: The identifier of the tool call this message responds to.
         private init(
             role: Role,
             content: String,
             images: [Data]? = nil,
             toolCalls: [ToolCall]? = nil,
-            thinking: String? = nil
+            thinking: String? = nil,
+            toolName: String? = nil,
+            toolCallID: String? = nil
         ) {
             self.role = role
             self.content = content
             self.images = images
             self.toolCalls = toolCalls
             self.thinking = thinking
+            self.toolName = toolName
+            self.toolCallID = toolCallID
         }
 
         /// Creates a system message.
@@ -143,11 +162,20 @@ public enum Chat {
         ///
         /// - Parameters:
         ///   - content: The content of the message.
+        ///   - toolName: The name of the tool that produced the result.
+        ///   - toolCallID: The ``ToolCall/id`` of the tool call this result responds to.
         /// - Returns: A new `Message` instance with the tool role.
         public static func tool(
-            _ content: String
+            _ content: String,
+            toolName: String? = nil,
+            toolCallID: String? = nil
         ) -> Message {
-            return Message(role: .tool, content: content)
+            return Message(
+                role: .tool,
+                content: content,
+                toolName: toolName,
+                toolCallID: toolCallID
+            )
         }
     }
 }
@@ -160,6 +188,8 @@ extension Chat.Message: Codable {
         case images
         case toolCalls = "tool_calls"
         case thinking
+        case toolName = "tool_name"
+        case toolCallID = "tool_call_id"
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -170,6 +200,8 @@ extension Chat.Message: Codable {
         try container.encodeIfPresent(images, forKey: .images)
         try container.encodeIfPresent(toolCalls, forKey: .toolCalls)
         try container.encodeIfPresent(thinking, forKey: .thinking)
+        try container.encodeIfPresent(toolName, forKey: .toolName)
+        try container.encodeIfPresent(toolCallID, forKey: .toolCallID)
     }
 
     public init(from decoder: Decoder) throws {
@@ -180,5 +212,7 @@ extension Chat.Message: Codable {
         images = try container.decodeIfPresent([Data].self, forKey: .images)
         toolCalls = try container.decodeIfPresent([ToolCall].self, forKey: .toolCalls)
         thinking = try container.decodeIfPresent(String.self, forKey: .thinking)
+        toolName = try container.decodeIfPresent(String.self, forKey: .toolName)
+        toolCallID = try container.decodeIfPresent(String.self, forKey: .toolCallID)
     }
 }
